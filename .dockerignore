@@ -1,0 +1,15 @@
+**/.git
+**/node_modules
+**/vendor
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/.env
+frontend/dist
+frontend/.env
+**/.DS_Store
+**/*.log
+specs
+.claude
+.github
