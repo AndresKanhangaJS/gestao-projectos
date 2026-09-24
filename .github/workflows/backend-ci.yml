@@ -18,6 +18,17 @@ jobs:
       run:
         working-directory: backend
 
+    # Aplica-se a todos os passos: o .env copiado do .env.example aponta para
+    # os hosts do docker-compose (mysql/redis), que não existem no runner.
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: gestao_projectos_test
+      DB_USERNAME: root
+      DB_PASSWORD: ''
+      REDIS_HOST: 127.0.0.1
+
     services:
       mysql:
         image: mysql:8.0
@@ -67,14 +78,6 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate --force
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: gestao_projectos_test
-          DB_USERNAME: root
-          DB_PASSWORD: ''
-          REDIS_HOST: 127.0.0.1
 
       - name: Pint (lint)
         run: vendor/bin/pint --test
@@ -84,24 +87,10 @@ jobs:
 
       - name: Migrações
         run: php artisan migrate --force
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: gestao_projectos_test
-          DB_USERNAME: root
-          DB_PASSWORD: ''
 
       - name: Testes (PHPUnit)
         run: php artisan test
         env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: gestao_projectos_test
-          DB_USERNAME: root
-          DB_PASSWORD: ''
-          REDIS_HOST: 127.0.0.1
           CACHE_STORE: array
           SESSION_DRIVER: array
           QUEUE_CONNECTION: sync
