@@ -51,7 +51,7 @@ Ver `ROADMAP.md`: Gantt/Calendário, automações, time tracking, relatórios av
 
 ## 6. Métricas de sucesso do MVP
 
-- 100% do inventário actual (19 máquinas, clientes e softwares da secção 3) representado no sistema e consultável em < 3 cliques.
+- 100% do inventário actual (20 máquinas numeradas + computador de backups = 21 registos, clientes e softwares da secção 3) representado no sistema e consultável em < 3 cliques.
 - Um utilizador consegue criar um projecto, um quadro e mover uma tarefa entre colunas sem consultar documentação.
 - Nenhuma credencial de infraestrutura visível em texto simples em resposta de API ou ecrã sem pedido explícito e permissão adequada.
 - `docker compose up -d --build` deixa o sistema operacional sem passos manuais adicionais além de `migrate --seed`.
