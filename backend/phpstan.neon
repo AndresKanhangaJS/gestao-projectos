@@ -1,0 +1,23 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app
+
+    level: 5
+
+    excludePaths:
+        - app/Providers/*Provider.php
+
+    ignoreErrors:
+        # JsonResource acede dinamicamente às propriedades do modelo subjacente
+        # via __get(); sem anotações @property/@mixin em cada Resource (que não
+        # compensa o esforço para ~30 classes finas), o Larastan não consegue
+        # inferir estas propriedades — falso positivo aceite e documentado.
+        -
+            identifier: property.notFound
+            path: app/Http/Resources/*
+        -
+            identifier: method.notFound
+            path: app/Http/Resources/*
