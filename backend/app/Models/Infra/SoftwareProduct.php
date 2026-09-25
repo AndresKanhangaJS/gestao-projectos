@@ -16,13 +16,21 @@ class SoftwareProduct extends Model
     /** @use HasFactory<SoftwareProductFactory> */
     use HasFactory;
 
-    /** Módulos que compõem este produto de software. */
+    /**
+     * Módulos que compõem este produto de software.
+     *
+     * @return HasMany<SoftwareModule, $this>
+     */
     public function modules(): HasMany
     {
         return $this->hasMany(SoftwareModule::class);
     }
 
-    /** Instâncias deste produto em clientes. */
+    /**
+     * Instâncias deste produto em clientes.
+     *
+     * @return HasMany<ClientSoftware, $this>
+     */
     public function clientSoftware(): HasMany
     {
         return $this->hasMany(ClientSoftware::class);

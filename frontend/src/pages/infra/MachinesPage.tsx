@@ -9,9 +9,17 @@ import { infraRootKey, machinesKey } from '@/components/infra/queryKeys'
 import { EnvironmentBadge } from '@/components/infra/EnvironmentBadge'
 import { Button } from '@/components/ui/Button'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/Spinner'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table'
 import { useInfraPermissions } from '@/hooks/useHasRole'
 import type { Machine } from '@/types/infra'
+import { EMPTY_VALUE } from '@/lib/format'
 
 export default function MachinesPage() {
   const queryClient = useQueryClient()
@@ -58,12 +66,19 @@ export default function MachinesPage() {
             {machines.map((machine) => (
               <TableRow key={machine.id}>
                 <TableCell>
-                  <Link to={`/infra/machines/${machine.id}`} className="font-medium text-primary hover:underline">
+                  <Link
+                    to={`/infra/machines/${machine.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
                     {machine.name}
                   </Link>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{machine.ip_address ?? '—'}</TableCell>
-                <TableCell className="text-muted-foreground">{machine.operating_system ?? '—'}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {machine.ip_address ?? EMPTY_VALUE}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {machine.operating_system ?? EMPTY_VALUE}
+                </TableCell>
                 <TableCell>
                   <EnvironmentBadge environment={machine.environment} />
                 </TableCell>

@@ -36,8 +36,6 @@ class TaskAttachmentController extends Controller
 
     public function store(StoreTaskAttachmentRequest $request, Task $task, ActivityLogger $activity): JsonResponse
     {
-        $this->authorize('update', $task);
-
         $file = $request->file('file');
         $path = $file->store("task-attachments/{$task->id}", self::DISK);
 

@@ -40,18 +40,23 @@ function renderSection() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const utils = render(
     <QueryClientProvider client={queryClient}>
-      <CredentialsSection machineId={7} targets={[{ type: 'machine', id: 7, label: 'Máquina 32' }]} />
+      <CredentialsSection
+        machineId={7}
+        targets={[{ type: 'machine', id: 7, label: 'Máquina 32' }]}
+      />
     </QueryClientProvider>,
   )
   return { ...utils, queryClient }
 }
 
 async function openRevealDialog(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: /revelar segredo da credencial ssh de root/i }))
+  await user.click(
+    await screen.findByRole('button', { name: /revelar segredo da credencial ssh de root/i }),
+  )
   return screen.findByRole('dialog')
 }
 
-describe('CredentialsSection — revelar credencial', () => {
+describe('CredentialsSection: revelar credencial', () => {
   beforeEach(() => {
     listMachineCredentialsMock.mockResolvedValue([credential])
     revealCredentialMock.mockResolvedValue({ secret: 's3cr3t-pass' })
@@ -103,12 +108,22 @@ describe('CredentialsSection — revelar credencial', () => {
     await user.click(within(dialog).getByRole('button', { name: /confirmar e revelar/i }))
     expect(await within(dialog).findByText('s3cr3t-pass')).toBeInTheDocument()
 
-    const cachedQueries = JSON.stringify(queryClient.getQueryCache().getAll().map((q) => q.state.data))
+    const cachedQueries = JSON.stringify(
+      queryClient
+        .getQueryCache()
+        .getAll()
+        .map((q) => q.state.data),
+    )
     expect(cachedQueries).not.toContain('s3cr3t-pass')
 
     await user.click(within(dialog).getByRole('button', { name: /esconder e fechar/i }))
     await waitFor(() => expect(screen.queryByText('s3cr3t-pass')).not.toBeInTheDocument())
-    const cachedMutations = JSON.stringify(queryClient.getMutationCache().getAll().map((m) => m.state.data))
+    const cachedMutations = JSON.stringify(
+      queryClient
+        .getMutationCache()
+        .getAll()
+        .map((m) => m.state.data),
+    )
     expect(cachedMutations).not.toContain('s3cr3t-pass')
   })
 
@@ -136,7 +151,9 @@ describe('CredentialsSection — revelar credencial', () => {
     const dialog = await openRevealDialog(user)
     await user.click(within(dialog).getByRole('button', { name: /confirmar e revelar/i }))
 
-    expect(await within(dialog).findByText(/não tem permissão para revelar esta credencial/i)).toBeInTheDocument()
+    expect(
+      await within(dialog).findByText(/não tem permissão para revelar esta credencial/i),
+    ).toBeInTheDocument()
   })
 
   it('ignora credenciais de recursos que não pertencem à máquina', async () => {
@@ -154,6 +171,8 @@ describe('CredentialsSection — revelar credencial', () => {
     listMachineCredentialsMock.mockRejectedValue(forbiddenError())
     renderSection()
 
-    expect(await screen.findByText(/não tem permissão para consultar credenciais/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/não tem permissão para consultar credenciais/i),
+    ).toBeInTheDocument()
   })
 })

@@ -6,6 +6,52 @@ export type ProjectStatus = 'active' | 'archived'
 export type SprintStatus = 'planned' | 'active' | 'completed'
 export type WorkspaceRole = 'owner' | 'manager' | 'member' | 'viewer'
 export type TaskRelationType = 'blocks' | 'blocked_by' | 'relates_to' | 'duplicates'
+/** Filtro de sprint de `GET /projects/{project}/tasks?sprint=`. */
+export type TaskSprintFilter = 'active' | 'backlog' | 'all'
+
+/**
+ * Permissões do utilizador autenticado sobre o workspace/projecto, calculadas pelo backend
+ * (`can` em `ProjectResource`/`WorkspaceResource`). Servem só para UX; a API continua a validar.
+ */
+export interface ProjectPermissions {
+  create_task: boolean
+  delete_task: boolean
+  manage_board: boolean
+  manage_sprints: boolean
+  manage_members: boolean
+  /** Criar etiquetas (= create_task). Opcional: versões antigas da API não o enviam. */
+  create_label?: boolean
+  /** Só em `WorkspaceResource.can`: criar projectos neste workspace. */
+  create_project?: boolean
+  /** Editar os dados do projecto (nome, descrição, ligação ao cliente). Opcional na API. */
+  update_project?: boolean
+}
+
+/** Referência curta (id + nome) usada nas ligações projecto ↔ software/cliente/módulos. */
+export interface NamedRef {
+  id: number
+  name: string
+}
+
+/** Resposta de `GET /projects/link-options`: o que se pode ligar a um projecto. */
+export interface ProjectLinkOptions {
+  software_products: {
+    id: number
+    name: string
+    modules: NamedRef[]
+    /** Clientes com este software instalado e os módulos activos na instalação. */
+    clients: { id: number; name: string; all_modules: boolean; module_ids: number[] }[]
+  }[]
+}
+
+/** Projecto resumido nas vistas de Infra (overview de cliente e de software). */
+export interface ProjectSummaryRef {
+  id: number
+  key: string
+  name: string
+  status: ProjectStatus
+  workspace_id: number
+}
 
 /** Resumo de utilizador devolvido pelo `UserSummaryResource` (id, nome e, por vezes, email). */
 export interface UserSummary {
@@ -14,14 +60,20 @@ export interface UserSummary {
   email?: string
 }
 
+/** Membro de workspace (`WorkspaceResource.members`), com o papel no workspace. */
+export interface WorkspaceMember extends UserSummary {
+  role?: WorkspaceRole | null
+}
+
 export interface Workspace {
   id: number
   name: string
   slug: string
   description: string | null
-  owner_id?: number
+  owner?: UserSummary | null
   my_role?: WorkspaceRole | null
-  members?: UserSummary[]
+  can?: ProjectPermissions
+  members?: WorkspaceMember[]
   members_count?: number
   projects_count?: number
   created_at: string
@@ -34,7 +86,24 @@ export interface Project {
   name: string
   description: string | null
   status: ProjectStatus
+  my_role?: WorkspaceRole | null
+  can?: ProjectPermissions
+  active_sprint?: ActiveSprintSummary | null
+  /** Ligação opcional a um produto de software, a um cliente que o usa e a módulos. */
+  software_product?: NamedRef | null
+  client?: NamedRef | null
+  modules?: NamedRef[]
+  tasks_count?: number
   created_at: string
+}
+
+/** Resumo do sprint activo incluído em `ProjectResource.active_sprint`. */
+export interface ActiveSprintSummary {
+  id: number
+  name: string
+  starts_at: string | null
+  ends_at: string | null
+  goal: string | null
 }
 
 export interface Board {
@@ -94,7 +163,7 @@ export interface TaskAttachment {
   id: number
   task_id: number
   original_name: string
-  /** Endpoint autenticado de download — usar `downloadAttachment` (blob via axios), nunca link directo. */
+  /** Endpoint autenticado de download: usar `downloadAttachment` (blob via axios), nunca link directo. */
   download_url?: string
   uploader?: UserSummary | null
   created_at: string

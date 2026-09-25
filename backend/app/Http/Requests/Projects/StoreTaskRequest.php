@@ -7,6 +7,9 @@ namespace App\Http\Requests\Projects;
 use App\Enums\Projects\TaskPriority;
 use App\Enums\Projects\TaskType;
 use App\Models\Projects\Project;
+use App\Models\Projects\Task;
+use App\Rules\Projects\OpenSprint;
+use App\Rules\Projects\WorkspaceMember;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -15,7 +18,10 @@ class StoreTaskRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var Project $project */
+        $project = $this->route('project');
+
+        return (bool) $this->user()?->can('create', [Task::class, $project]);
     }
 
     /**
@@ -35,16 +41,17 @@ class StoreTaskRequest extends FormRequest
                 ),
             ],
             'sprint_id' => [
+                'bail',
                 'nullable',
                 'integer',
                 Rule::exists('sprints', 'id')->where('project_id', $project->id),
+                new OpenSprint,
             ],
             'parent_id' => [
                 'nullable',
                 'integer',
                 Rule::exists('tasks', 'id')->where('project_id', $project->id),
             ],
-            'reporter_id' => ['nullable', 'integer', Rule::exists('users', 'id')],
             'type' => ['required', new Enum(TaskType::class)],
             'priority' => ['nullable', new Enum(TaskPriority::class)],
             'title' => ['required', 'string', 'max:255'],
@@ -59,6 +66,9 @@ class StoreTaskRequest extends FormRequest
                 'distinct',
                 Rule::exists('labels', 'id')->where('project_id', $project->id),
             ],
+            // Responsáveis iniciais: têm de ser membros do workspace do projecto.
+            'assignee_ids' => ['sometimes', 'array'],
+            'assignee_ids.*' => ['integer', 'distinct', new WorkspaceMember($project->workspace)],
         ];
     }
 }

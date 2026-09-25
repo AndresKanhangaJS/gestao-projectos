@@ -16,7 +16,10 @@ class StoreSubtaskRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var Task $task */
+        $task = $this->route('task');
+
+        return (bool) $this->user()?->can('create', [Task::class, $task->project]);
     }
 
     /**

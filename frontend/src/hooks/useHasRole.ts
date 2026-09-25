@@ -10,7 +10,7 @@ import {
 
 /**
  * `true` se o utilizador autenticado tiver pelo menos um dos papéis indicados.
- * Serve só para UX (esconder o que não pode usar) — o backend continua a ser a barreira real.
+ * Serve só para UX (esconder o que não pode usar); o backend continua a ser a barreira real.
  */
 export function useHasRole(...roles: Role[]): boolean {
   const { user } = useAuth()

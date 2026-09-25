@@ -9,7 +9,14 @@ import { clientsKey, infraRootKey } from '@/components/infra/queryKeys'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/Spinner'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table'
 import { useInfraPermissions } from '@/hooks/useHasRole'
 import { CLIENT_STATUS_LABEL } from '@/lib/labels'
 import type { Client } from '@/types/infra'
@@ -58,12 +65,16 @@ export default function ClientsPage() {
             {clients.map((client) => (
               <TableRow key={client.id}>
                 <TableCell>
-                  <Link to={`/infra/clients/${client.id}`} className="font-medium text-primary hover:underline">
+                  <Link
+                    to={`/infra/clients/${client.id}`}
+                    className="font-medium text-primary hover:underline"
+                  >
                     {client.name}
                   </Link>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {[client.contact_name, client.contact_email].filter(Boolean).join(' · ') || '—'}
+                  {[client.contact_name, client.contact_email].filter(Boolean).join(' · ') ||
+                    'Sem contacto'}
                 </TableCell>
                 <TableCell>
                   <Badge variant={client.status === 'active' ? 'success' : 'secondary'}>

@@ -27,8 +27,6 @@ class BoardColumnController extends Controller
 
     public function store(StoreBoardColumnRequest $request, Board $board): JsonResponse
     {
-        $this->authorize('update', $board->project);
-
         $data = $request->validated();
         // 0 num quadro vazio, senão a seguir à última coluna.
         $max = $board->columns()->max('position');
@@ -51,8 +49,6 @@ class BoardColumnController extends Controller
 
     public function update(UpdateBoardColumnRequest $request, BoardColumn $column): JsonResponse
     {
-        $this->authorize('update', $column->board->project);
-
         $column->update($request->validated());
 
         return BoardColumnResource::make($column)->response();
@@ -60,7 +56,7 @@ class BoardColumnController extends Controller
 
     public function destroy(BoardColumn $column): Response
     {
-        $this->authorize('delete', $column->board->project);
+        $this->authorize('manageBoard', $column->board->project);
 
         // tasks.board_column_id é FK restrict: sem esta verificação o DELETE rebentaria com 500.
         if ($column->tasks()->exists()) {

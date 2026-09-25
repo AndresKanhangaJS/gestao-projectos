@@ -128,6 +128,7 @@ class TaskWorkflowTest extends TestCase
     public function test_user_can_be_assigned_to_a_task(): void
     {
         $assignee = User::factory()->create();
+        $this->project->workspace->members()->attach($assignee->id, ['role' => WorkspaceRole::Member->value]);
 
         $taskId = $this->postJson("/api/projects/{$this->project->id}/tasks", [
             'board_column_id' => $this->todoColumn->id,

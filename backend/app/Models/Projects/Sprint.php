@@ -12,6 +12,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property SprintStatus $status
+ */
 #[Fillable(['project_id', 'name', 'goal', 'starts_at', 'ends_at', 'status'])]
 class Sprint extends Model
 {

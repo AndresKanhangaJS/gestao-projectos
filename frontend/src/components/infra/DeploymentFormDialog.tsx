@@ -2,14 +2,24 @@ import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createDeployment, listClientSoftware, listMachines, listSoftwareModules, updateDeployment } from '@/api/infra'
+import {
+  createDeployment,
+  listClientSoftware,
+  listMachines,
+  listSoftwareModules,
+  updateDeployment,
+} from '@/api/infra'
 import { Button } from '@/components/ui/Button'
+import { ChoiceWithOtherField } from '@/components/ui/ChoiceWithOther'
+import { ComboboxField } from '@/components/ui/ComboboxField'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
 import { FormField, FormServerError } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { SelectField } from '@/components/ui/SelectField'
 import { Textarea } from '@/components/ui/Textarea'
 import { applyServerErrors, emptyToNull, fieldA11y } from '@/lib/forms'
+import { HELP } from '@/lib/help'
+import { DATABASE_ENGINE_OPTIONS, DATABASE_HOST_LOCALHOST } from '@/lib/infraOptions'
 import {
   DEPLOYMENT_COMPONENT_LABEL,
   DEPLOYMENT_STATUS_LABEL,
@@ -23,11 +33,16 @@ const schema = z.object({
   client_software_id: z.string().min(1, 'Seleccione a instalação cliente/software.'),
   software_module_id: z.string(),
   machine_id: z.string().min(1, 'Seleccione a máquina.'),
-  component: z.enum(['frontend', 'backend', 'full', 'worker'], { error: 'Seleccione o componente.' }),
+  component: z.enum(['frontend', 'backend', 'full', 'worker'], {
+    error: 'Seleccione o componente.',
+  }),
   port: z
     .string()
     .regex(/^\d*$/, 'A porta tem de ser um número.')
-    .refine((v) => v === '' || (Number(v) >= 1 && Number(v) <= 65535), 'A porta tem de estar entre 1 e 65535.'),
+    .refine(
+      (v) => v === '' || (Number(v) >= 1 && Number(v) <= 65535),
+      'A porta tem de estar entre 1 e 65535.',
+    ),
   stack: z.string().max(255, 'Máximo de 255 caracteres.'),
   database_engine: z.string().max(255, 'Máximo de 255 caracteres.'),
   database_name: z.string().max(255, 'Máximo de 255 caracteres.'),
@@ -80,7 +95,8 @@ export function DeploymentFormDialog({
     resolver: zodResolver(schema),
     defaultValues: {
       client_software_id: deployment ? String(deployment.client_software_id) : '',
-      software_module_id: deployment?.software_module_id != null ? String(deployment.software_module_id) : '',
+      software_module_id:
+        deployment?.software_module_id != null ? String(deployment.software_module_id) : '',
       machine_id: deployment
         ? String(deployment.machine_id)
         : defaultMachineId != null
@@ -132,29 +148,53 @@ export function DeploymentFormDialog({
       onClose()
     },
     onError: (error) =>
-      applyServerErrors(error, setError, { fields: FIELDS, fallback: 'Não foi possível guardar o deployment.' }),
+      applyServerErrors(error, setError, {
+        fields: FIELDS,
+        fallback: 'Não foi possível guardar o deployment.',
+      }),
   })
 
   const instanceOptions = (instancesQuery.data ?? []).map((i) => ({
     value: String(i.id),
     label: `${i.client?.name ?? `Cliente #${i.client_id}`} / ${i.software_product?.name ?? `Software #${i.software_product_id}`}`,
   }))
+  const machines = machinesQuery.data ?? []
+  const machineOptions = machines.map((m) => ({
+    value: String(m.id),
+    label: m.name,
+    description: m.ip_address ?? undefined,
+  }))
+  // Host da BD: a própria máquina, outra máquina registada (grava o nome) ou texto livre.
+  const databaseHostOptions = [
+    DATABASE_HOST_LOCALHOST,
+    ...machines.map((m) => ({
+      value: m.name,
+      label: m.name,
+      description: m.ip_address ?? undefined,
+    })),
+  ]
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>{deployment ? 'Editar deployment' : 'Novo deployment'}</DialogTitle>
         </DialogHeader>
-        <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+        <form
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField id="d-instance" label="Cliente / software" error={errors.client_software_id}>
-              <SelectField
+              <ComboboxField
                 control={control}
                 name="client_software_id"
                 id="d-instance"
                 invalid={!!errors.client_software_id}
-                placeholder={instancesQuery.isLoading ? 'A carregar…' : 'Seleccione…'}
+                placeholder={
+                  instancesQuery.isLoading ? 'A carregar…' : 'Pesquise cliente ou software…'
+                }
                 options={instanceOptions}
                 onValueChange={() => setValue('software_module_id', '')}
               />
@@ -167,20 +207,20 @@ export function DeploymentFormDialog({
                 emptyLabel="Nenhum"
                 disabled={productId == null}
                 invalid={!!errors.software_module_id}
-                options={(modulesQuery.data ?? []).map((m) => ({ value: String(m.id), label: m.name }))}
+                options={(modulesQuery.data ?? []).map((m) => ({
+                  value: String(m.id),
+                  label: m.name,
+                }))}
               />
             </FormField>
             <FormField id="d-machine" label="Máquina" error={errors.machine_id}>
-              <SelectField
+              <ComboboxField
                 control={control}
                 name="machine_id"
                 id="d-machine"
                 invalid={!!errors.machine_id}
-                placeholder={machinesQuery.isLoading ? 'A carregar…' : 'Seleccione…'}
-                options={(machinesQuery.data ?? []).map((m) => ({
-                  value: String(m.id),
-                  label: m.ip_address ? `${m.name} (${m.ip_address})` : m.name,
-                }))}
+                placeholder={machinesQuery.isLoading ? 'A carregar…' : 'Pesquise nome ou IP…'}
+                options={machineOptions}
               />
             </FormField>
             <FormField id="d-component" label="Componente" error={errors.component}>
@@ -196,10 +236,18 @@ export function DeploymentFormDialog({
               />
             </FormField>
             <FormField id="d-port" label="Porta" error={errors.port}>
-              <Input inputMode="numeric" {...fieldA11y('d-port', errors.port)} {...register('port')} />
+              <Input
+                inputMode="numeric"
+                {...fieldA11y('d-port', errors.port)}
+                {...register('port')}
+              />
             </FormField>
             <FormField id="d-stack" label="Stack" error={errors.stack}>
-              <Input placeholder="Laravel + React" {...fieldA11y('d-stack', errors.stack)} {...register('stack')} />
+              <Input
+                placeholder="Laravel + React"
+                {...fieldA11y('d-stack', errors.stack)}
+                {...register('stack')}
+              />
             </FormField>
             <FormField id="d-env" label="Ambiente" error={errors.environment_type}>
               <SelectField
@@ -225,14 +273,52 @@ export function DeploymentFormDialog({
                 }))}
               />
             </FormField>
-            <FormField id="d-db-engine" label="Motor de base de dados" error={errors.database_engine}>
-              <Input {...fieldA11y('d-db-engine', errors.database_engine)} {...register('database_engine')} />
+            <FormField
+              id="d-db-engine"
+              label="Motor de base de dados"
+              error={errors.database_engine}
+              help={HELP.databaseEngine}
+            >
+              <ChoiceWithOtherField
+                control={control}
+                name="database_engine"
+                id="d-db-engine"
+                options={DATABASE_ENGINE_OPTIONS}
+                noneLabel="Sem base de dados"
+                otherInputLabel="Motor de base de dados (outro)"
+                otherPlaceholder="ex.: Firebird"
+                invalid={!!errors.database_engine}
+              />
             </FormField>
-            <FormField id="d-db-name" label="Nome da base de dados" error={errors.database_name}>
-              <Input {...fieldA11y('d-db-name', errors.database_name)} {...register('database_name')} />
+            <FormField
+              id="d-db-name"
+              label="Nome da base de dados"
+              error={errors.database_name}
+              help={HELP.databaseName}
+            >
+              <Input
+                placeholder="ex.: levelschool_producao"
+                {...fieldA11y('d-db-name', errors.database_name)}
+                {...register('database_name')}
+              />
             </FormField>
-            <FormField id="d-db-host" label="Host da base de dados" error={errors.database_host}>
-              <Input {...fieldA11y('d-db-host', errors.database_host)} {...register('database_host')} />
+            <FormField
+              id="d-db-host"
+              label="Host da base de dados"
+              error={errors.database_host}
+              help={HELP.databaseHost}
+            >
+              <ChoiceWithOtherField
+                control={control}
+                name="database_host"
+                id="d-db-host"
+                variant="combobox"
+                options={databaseHostOptions}
+                noneLabel="Não definido"
+                otherInputLabel="Host da base de dados (outro)"
+                otherPlaceholder="ex.: 10.10.10.5 ou db.cliente.local"
+                invalid={!!errors.database_host}
+              />
             </FormField>
             <FormField id="d-checked" label="Última verificação" error={errors.last_checked_at}>
               <Input
@@ -251,7 +337,11 @@ export function DeploymentFormDialog({
           </FormField>
           <FormServerError message={errors.root?.server?.message} />
           <Button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'A guardar…' : deployment ? 'Guardar alterações' : 'Criar deployment'}
+            {mutation.isPending
+              ? 'A guardar…'
+              : deployment
+                ? 'Guardar alterações'
+                : 'Criar deployment'}
           </Button>
         </form>
       </DialogContent>

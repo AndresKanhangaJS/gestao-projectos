@@ -1,6 +1,6 @@
 import { forwardRef } from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, ChevronUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const Select = SelectPrimitive.Root
@@ -27,6 +27,14 @@ export const SelectTrigger = forwardRef<
 ))
 SelectTrigger.displayName = 'SelectTrigger'
 
+const scrollButtonClass =
+  'flex cursor-default items-center justify-center py-1 text-muted-foreground'
+
+/**
+ * Lista de opções. Em modo `popper` (por omissão) fica limitada a 20rem ou ao espaço disponível
+ * no ecrã, com scroll (roda do rato, toque, teclado) e setas de scroll do Radix nas pontas.
+ * Para listas longas (máquinas, clientes, utilizadores…) preferir o `Combobox` pesquisável.
+ */
 export const SelectContent = forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
@@ -36,13 +44,22 @@ export const SelectContent = forwardRef<
       ref={ref}
       position={position}
       className={cn(
-        'z-50 min-w-[8rem] overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-md',
-        position === 'popper' && 'translate-y-1',
+        'relative z-50 flex min-w-[8rem] flex-col overflow-hidden rounded-md border border-border bg-card text-card-foreground shadow-md',
+        position === 'popper' &&
+          'max-h-[min(20rem,var(--radix-select-content-available-height))] w-full min-w-[var(--radix-select-trigger-width)] translate-y-1',
         className,
       )}
       {...props}
     >
-      <SelectPrimitive.Viewport className="p-1">{children}</SelectPrimitive.Viewport>
+      <SelectPrimitive.ScrollUpButton className={scrollButtonClass} aria-hidden="true">
+        <ChevronUp className="h-4 w-4" />
+      </SelectPrimitive.ScrollUpButton>
+      <SelectPrimitive.Viewport className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1">
+        {children}
+      </SelectPrimitive.Viewport>
+      <SelectPrimitive.ScrollDownButton className={scrollButtonClass} aria-hidden="true">
+        <ChevronDown className="h-4 w-4" />
+      </SelectPrimitive.ScrollDownButton>
     </SelectPrimitive.Content>
   </SelectPrimitive.Portal>
 ))

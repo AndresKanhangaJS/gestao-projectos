@@ -8,17 +8,29 @@ import { createColumn, deleteColumn, reorderColumns, updateColumn } from '@/api/
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 import { FieldError, FormServerError } from '@/components/ui/FormField'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { mutationErrorMessage } from '@/lib/errors'
 import { applyServerErrors, fieldA11y } from '@/lib/forms'
+import { HELP } from '@/lib/help'
 import type { Board, BoardColumn } from '@/types/projects'
-import { projectBoardsKey, projectTasksKey } from './queryKeys'
+import { projectBoardsKey, projectTasksKey, taskDetailsKey } from './queryKeys'
 
 const nameSchema = z.object({
-  name: z.string().trim().min(1, 'O nome da coluna é obrigatório.').max(255, 'O nome não pode ter mais de 255 caracteres.'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'O nome da coluna é obrigatório.')
+    .max(255, 'O nome não pode ter mais de 255 caracteres.'),
 })
 type NameValues = z.infer<typeof nameSchema>
 
@@ -50,7 +62,10 @@ function ColumnRow({
     setError,
     formState: { errors, isDirty },
     reset,
-  } = useForm<NameValues>({ resolver: zodResolver(nameSchema), defaultValues: { name: column.name } })
+  } = useForm<NameValues>({
+    resolver: zodResolver(nameSchema),
+    defaultValues: { name: column.name },
+  })
 
   const renameMutation = useMutation({
     mutationFn: (values: NameValues) => updateColumn(column.id, { name: values.name }),
@@ -59,7 +74,10 @@ function ColumnRow({
       onChanged()
     },
     onError: (error) =>
-      applyServerErrors(error, setError, { fields: ['name'], fallback: 'Não foi possível renomear a coluna.' }),
+      applyServerErrors(error, setError, {
+        fields: ['name'],
+        fallback: 'Não foi possível renomear a coluna.',
+      }),
   })
 
   const doneMutation = useMutation({
@@ -98,7 +116,7 @@ function ColumnRow({
             onCheckedChange={(checked) => doneMutation.mutate(checked === true)}
           />
           <Label htmlFor={`column-${column.id}-done`} className="text-xs font-normal">
-            Concluído
+            Coluna de conclusão
           </Label>
         </div>
         <Button
@@ -142,7 +160,15 @@ function ColumnRow({
   )
 }
 
-function NewColumnForm({ board, nextPosition, onCreated }: { board: Board; nextPosition: number; onCreated: () => void }) {
+function NewColumnForm({
+  board,
+  nextPosition,
+  onCreated,
+}: {
+  board: Board
+  nextPosition: number
+  onCreated: () => void
+}) {
   const {
     register,
     handleSubmit,
@@ -152,20 +178,32 @@ function NewColumnForm({ board, nextPosition, onCreated }: { board: Board; nextP
   } = useForm<NameValues>({ resolver: zodResolver(nameSchema), defaultValues: { name: '' } })
 
   const mutation = useMutation({
-    mutationFn: (values: NameValues) => createColumn(board.id, { name: values.name, position: nextPosition }),
+    mutationFn: (values: NameValues) =>
+      createColumn(board.id, { name: values.name, position: nextPosition }),
     onSuccess: () => {
       reset({ name: '' })
       onCreated()
     },
     onError: (error) =>
-      applyServerErrors(error, setError, { fields: ['name'], fallback: 'Não foi possível criar a coluna.' }),
+      applyServerErrors(error, setError, {
+        fields: ['name'],
+        fallback: 'Não foi possível criar a coluna.',
+      }),
   })
 
   return (
-    <form className="flex flex-col gap-1.5" noValidate onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+    <form
+      className="flex flex-col gap-1.5"
+      noValidate
+      onSubmit={handleSubmit((values) => mutation.mutate(values))}
+    >
       <Label htmlFor="new-column-name">Nova coluna</Label>
       <div className="flex gap-2">
-        <Input placeholder="Ex.: Em revisão" {...fieldA11y('new-column-name', errors.name)} {...register('name')} />
+        <Input
+          placeholder="Ex.: Em revisão"
+          {...fieldA11y('new-column-name', errors.name)}
+          {...register('name')}
+        />
         <Button type="submit" disabled={mutation.isPending}>
           Adicionar
         </Button>
@@ -196,7 +234,12 @@ export function ColumnsManagerDialog({
   const columns = sortColumns(board.columns ?? [])
   const boardsKey = projectBoardsKey(projectId)
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: boardsKey })
+  // Nome e "coluna de conclusão" aparecem nas tarefas (Lista, Backlog, detalhe, atrasos, subtarefas).
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: boardsKey })
+    void queryClient.invalidateQueries({ queryKey: projectTasksKey(projectId) })
+    void queryClient.invalidateQueries({ queryKey: taskDetailsKey })
+  }
 
   const reorderMutation = useMutation({
     mutationFn: reorderColumns,
@@ -205,7 +248,9 @@ export function ColumnsManagerDialog({
       const previous = queryClient.getQueryData<Board[]>(boardsKey)
       queryClient.setQueryData<Board[]>(boardsKey, (old) =>
         (old ?? []).map((b) =>
-          b.id === board.id ? { ...b, columns: ordered.map((c, index) => ({ ...c, position: index })) } : b,
+          b.id === board.id
+            ? { ...b, columns: ordered.map((c, index) => ({ ...c, position: index })) }
+            : b,
         ),
       )
       return { previous }
@@ -225,11 +270,12 @@ export function ColumnsManagerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>Colunas de “{board.name}”</DialogTitle>
-          <DialogDescription>
-            Renomeie, reordene com as setas ou marque a coluna que representa trabalho concluído.
+          <DialogDescription className="flex items-center gap-1">
+            Renomeie, reordene com as setas ou marque a coluna de conclusão (trabalho terminado).
+            <InfoTooltip {...HELP.doneColumn} />
           </DialogDescription>
         </DialogHeader>
 
@@ -266,10 +312,7 @@ export function ColumnsManagerDialog({
           title={`Apagar a coluna “${toDelete?.name ?? ''}”?`}
           description="Só é possível apagar colunas sem tarefas. Mova as tarefas para outra coluna antes de apagar."
           remove={(column) => deleteColumn(column.id)}
-          onDeleted={() => {
-            refresh()
-            queryClient.invalidateQueries({ queryKey: projectTasksKey(projectId) })
-          }}
+          onDeleted={refresh}
           // Um 422 da API (coluna com tarefas) é mostrado tal como vem em `errors.column`.
           errorFallback="Não foi possível apagar a coluna."
         />

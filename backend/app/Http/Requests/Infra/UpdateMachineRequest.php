@@ -6,6 +6,7 @@ namespace App\Http\Requests\Infra;
 
 use App\Enums\Infra\MachineAccessType;
 use App\Enums\Infra\MachineEnvironment;
+use App\Rules\Infra\IpAddressWithOptionalPort;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +30,7 @@ class UpdateMachineRequest extends FormRequest
                 'sometimes', 'required', 'string', 'max:255',
                 Rule::unique('machines', 'name')->ignore($machine),
             ],
-            'ip_address' => ['nullable', 'ip'],
+            'ip_address' => ['nullable', 'string', 'max:64', new IpAddressWithOptionalPort],
             'operating_system' => ['nullable', 'string', 'max:255'],
             'access_type' => ['nullable', Rule::enum(MachineAccessType::class)],
             'access_user' => ['nullable', 'string', 'max:255'],

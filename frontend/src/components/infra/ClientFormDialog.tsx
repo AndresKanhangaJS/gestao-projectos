@@ -15,7 +15,11 @@ import type { Client } from '@/types/infra'
 import { infraRootKey } from './queryKeys'
 
 const schema = z.object({
-  name: z.string().trim().min(1, 'O nome é obrigatório.').max(255, 'O nome não pode ter mais de 255 caracteres.'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'O nome é obrigatório.')
+    .max(255, 'O nome não pode ter mais de 255 caracteres.'),
   contact_name: z.string().max(255, 'Máximo de 255 caracteres.'),
   contact_email: z.union([z.literal(''), z.email('Introduza um email válido.')]),
   contact_phone: z.string().max(50, 'Máximo de 50 caracteres.'),
@@ -23,7 +27,14 @@ const schema = z.object({
   notes: z.string(),
 })
 type FormValues = z.infer<typeof schema>
-const FIELDS = ['name', 'contact_name', 'contact_email', 'contact_phone', 'status', 'notes'] as const
+const FIELDS = [
+  'name',
+  'contact_name',
+  'contact_email',
+  'contact_phone',
+  'status',
+  'notes',
+] as const
 
 /** Criar (client = null) ou editar um cliente. Montar só quando aberto, com `key` do cliente. */
 export function ClientFormDialog({
@@ -71,22 +82,32 @@ export function ClientFormDialog({
       onOpenChange(false)
     },
     onError: (error) =>
-      applyServerErrors(error, setError, { fields: FIELDS, fallback: 'Não foi possível guardar o cliente.' }),
+      applyServerErrors(error, setError, {
+        fields: FIELDS,
+        fallback: 'Não foi possível guardar o cliente.',
+      }),
   })
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>{client ? 'Editar cliente' : 'Novo cliente'}</DialogTitle>
         </DialogHeader>
-        <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+        <form
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        >
           <FormField id="c-name" label="Nome" error={errors.name}>
             <Input {...fieldA11y('c-name', errors.name)} {...register('name')} />
           </FormField>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField id="c-contact-name" label="Pessoa de contacto" error={errors.contact_name}>
-              <Input {...fieldA11y('c-contact-name', errors.contact_name)} {...register('contact_name')} />
+              <Input
+                {...fieldA11y('c-contact-name', errors.contact_name)}
+                {...register('contact_name')}
+              />
             </FormField>
             <FormField id="c-status" label="Estado" error={errors.status}>
               <SelectField
@@ -94,14 +115,25 @@ export function ClientFormDialog({
                 name="status"
                 id="c-status"
                 invalid={!!errors.status}
-                options={optionKeys(CLIENT_STATUS_LABEL).map((k) => ({ value: k, label: CLIENT_STATUS_LABEL[k] }))}
+                options={optionKeys(CLIENT_STATUS_LABEL).map((k) => ({
+                  value: k,
+                  label: CLIENT_STATUS_LABEL[k],
+                }))}
               />
             </FormField>
             <FormField id="c-email" label="Email de contacto" error={errors.contact_email}>
-              <Input type="email" {...fieldA11y('c-email', errors.contact_email)} {...register('contact_email')} />
+              <Input
+                type="email"
+                {...fieldA11y('c-email', errors.contact_email)}
+                {...register('contact_email')}
+              />
             </FormField>
             <FormField id="c-phone" label="Telefone" error={errors.contact_phone}>
-              <Input type="tel" {...fieldA11y('c-phone', errors.contact_phone)} {...register('contact_phone')} />
+              <Input
+                type="tel"
+                {...fieldA11y('c-phone', errors.contact_phone)}
+                {...register('contact_phone')}
+              />
             </FormField>
           </div>
           <FormField id="c-notes" label="Notas" error={errors.notes}>

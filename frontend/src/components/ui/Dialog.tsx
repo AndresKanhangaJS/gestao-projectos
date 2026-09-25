@@ -16,7 +16,8 @@ export const DialogContent = forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-6 text-card-foreground shadow-lg focus:outline-none',
+        // Em mobile ocupa quase o ecrã todo (margem de 0,5rem) com scroll interno.
+        'fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto overscroll-contain rounded-lg border border-border bg-card p-4 text-card-foreground shadow-lg focus:outline-none sm:p-6',
         className,
       )}
       {...props}

@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, CheckCheck } from 'lucide-react'
-import { listNotifications, markAllNotificationsRead, markNotificationRead } from '@/api/notifications'
+import {
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+} from '@/api/notifications'
 import { Button } from '@/components/ui/Button'
 import {
   DropdownMenu,
@@ -71,7 +75,9 @@ export function NotificationsMenu() {
           size="icon"
           className="relative"
           aria-label={
-            unreadCount > 0 ? `Notificações (${unreadCount} por ler)` : 'Notificações (nenhuma por ler)'
+            unreadCount > 0
+              ? `Notificações (${unreadCount} por ler)`
+              : 'Notificações (nenhuma por ler)'
           }
         >
           <Bell className="h-4 w-4" aria-hidden="true" />
@@ -86,7 +92,7 @@ export function NotificationsMenu() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
+      <DropdownMenuContent align="end" className="w-80 max-w-[calc(100vw-1rem)]">
         <div className="px-2 py-1.5 text-sm font-semibold">Notificações</div>
         <DropdownMenuItem
           disabled={unreadCount === 0 || markAllMutation.isPending}
@@ -107,7 +113,9 @@ export function NotificationsMenu() {
             <Spinner /> A carregar…
           </div>
         ) : recentQuery.isError && items.length === 0 ? (
-          <p className="p-4 text-center text-sm text-destructive">Não foi possível carregar as notificações.</p>
+          <p className="p-4 text-center text-sm text-destructive">
+            Não foi possível carregar as notificações.
+          </p>
         ) : items.length === 0 ? (
           <p className="p-4 text-center text-sm text-muted-foreground">Sem notificações.</p>
         ) : (
@@ -123,7 +131,10 @@ export function NotificationsMenu() {
                   <span className="flex w-full items-start gap-2">
                     <span
                       aria-hidden="true"
-                      className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', unread ? 'bg-primary' : 'bg-transparent')}
+                      className={cn(
+                        'mt-1.5 h-2 w-2 shrink-0 rounded-full',
+                        unread ? 'bg-primary' : 'bg-transparent',
+                      )}
                     />
                     <span className={cn('flex-1 text-sm', unread && 'font-medium')}>
                       {notification.message}

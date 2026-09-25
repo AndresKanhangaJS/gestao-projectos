@@ -7,10 +7,19 @@ export const INFRA_VIEW_ROLES: readonly Role[] = ['admin', 'infra', 'project_man
 export const INFRA_WRITE_ROLES: readonly Role[] = ['admin', 'infra']
 /** Quem pode ver/gerir credenciais. */
 export const CREDENTIAL_ROLES: readonly Role[] = ['admin', 'infra']
+/** Administração da aplicação (gestão de utilizadores). */
+export const ADMIN_ROLES: readonly Role[] = ['admin']
+/** Quem pode criar workspaces (papéis globais). */
+export const WORKSPACE_CREATE_ROLES: readonly Role[] = ['admin', 'project_manager']
+/** Quem pode dar o papel de dono num workspace, além do próprio dono. */
+export const WORKSPACE_OWNER_GRANT_ROLES: readonly Role[] = ['admin']
 /** Quem pode consultar o histórico de acessos a credenciais. */
 export const ACCESS_LOG_ROLES: readonly Role[] = ['admin']
 
-export function hasAnyRole(userRoles: readonly string[] | undefined, roles: readonly string[]): boolean {
+export function hasAnyRole(
+  userRoles: readonly string[] | undefined,
+  roles: readonly string[],
+): boolean {
   if (!userRoles?.length) return false
   return roles.some((role) => userRoles.includes(role))
 }

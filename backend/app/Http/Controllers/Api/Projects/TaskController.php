@@ -27,11 +27,10 @@ class TaskController extends Controller
 
     public function index(IndexTaskRequest $request, Project $project): JsonResponse
     {
-        $this->authorize('view', $project);
-
         $filters = $request->validated();
 
         $tasks = $project->tasks()
+            ->sprintFilter($filters['sprint'] ?? 'all')
             ->with(self::EAGER_LOAD)
             ->withCount(self::EAGER_COUNT)
             ->when($filters['board_column_id'] ?? null, fn (Builder $q, $id) => $q->where('board_column_id', (int) $id))
@@ -48,8 +47,6 @@ class TaskController extends Controller
 
     public function store(StoreTaskRequest $request, Project $project, TaskService $tasks): JsonResponse
     {
-        $this->authorize('create', [Task::class, $project]);
-
         $task = $tasks->create($project, $request->validated(), $request->user());
 
         return TaskResource::make($task->load(self::EAGER_LOAD)->loadCount(self::EAGER_COUNT))
@@ -78,8 +75,6 @@ class TaskController extends Controller
 
     public function update(UpdateTaskRequest $request, Task $task, TaskService $tasks): JsonResponse
     {
-        $this->authorize('update', $task);
-
         $tasks->update($task, $request->validated(), $request->user());
 
         return TaskResource::make($task->load(self::EAGER_LOAD)->loadCount(self::EAGER_COUNT))->response();
@@ -97,8 +92,6 @@ class TaskController extends Controller
     /** Cria uma subtarefa (parent_id = $task->id). Por omissão herda a coluna e o sprint da tarefa-mãe. */
     public function storeSubtask(StoreSubtaskRequest $request, Task $task, TaskService $tasks): JsonResponse
     {
-        $this->authorize('create', [Task::class, $task->project]);
-
         $subtask = $tasks->createSubtask($task, $request->validated(), $request->user());
 
         return TaskResource::make($subtask->load(self::EAGER_LOAD)->loadCount(self::EAGER_COUNT))
@@ -109,8 +102,6 @@ class TaskController extends Controller
     /** Move a tarefa para outra coluna e/ou posição (drag-and-drop no quadro Kanban). */
     public function move(MoveTaskRequest $request, Task $task, TaskService $tasks): JsonResponse
     {
-        $this->authorize('update', $task);
-
         $tasks->move(
             $task,
             (int) $request->validated('board_column_id'),

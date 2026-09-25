@@ -22,19 +22,22 @@ import type {
   UpdateClientSoftwarePayload,
   UpdateCredentialPayload,
 } from '@/types/infra'
+import type { ProjectSummaryRef } from '@/types/projects'
 
 // Clientes
-/** O endpoint é paginado — percorre todas as páginas. */
+/** O endpoint é paginado, por isso percorre todas as páginas. */
 export async function listClients(): Promise<Client[]> {
   return fetchAllPages<Client>('/infra/clients')
 }
 export async function getClientOverview(
   clientId: number,
-): Promise<{ client: Client; software: ClientSoftware[] }> {
-  const { data } = await api.get<{ client: Client | { data: Client }; software: ClientSoftware[] }>(
-    `/infra/clients/${clientId}/overview`,
-  )
-  return { client: unwrap(data.client), software: data.software }
+): Promise<{ client: Client; software: ClientSoftware[]; projects: ProjectSummaryRef[] }> {
+  const { data } = await api.get<{
+    client: Client | { data: Client }
+    software: ClientSoftware[]
+    projects?: ProjectSummaryRef[]
+  }>(`/infra/clients/${clientId}/overview`)
+  return { client: unwrap(data.client), software: data.software, projects: data.projects ?? [] }
 }
 export async function createClient(payload: ClientPayload): Promise<Client> {
   const { data } = await api.post<{ data: Client }>('/infra/clients', payload)
@@ -49,20 +52,29 @@ export async function deleteClient(id: number): Promise<void> {
 }
 
 // Produtos de software
-/** O endpoint é paginado — percorre todas as páginas. */
+/** O endpoint é paginado, por isso percorre todas as páginas. */
 export async function listSoftwareProducts(): Promise<SoftwareProduct[]> {
   return fetchAllPages<SoftwareProduct>('/infra/software-products')
 }
-export async function getSoftwareProductOverview(
-  productId: number,
-): Promise<{ software_product: SoftwareProduct; instances: ClientSoftware[] }> {
+export async function getSoftwareProductOverview(productId: number): Promise<{
+  software_product: SoftwareProduct
+  instances: ClientSoftware[]
+  projects: ProjectSummaryRef[]
+}> {
   const { data } = await api.get<{
     software_product: SoftwareProduct | { data: SoftwareProduct }
     instances: ClientSoftware[]
+    projects?: ProjectSummaryRef[]
   }>(`/infra/software-products/${productId}/overview`)
-  return { software_product: unwrap(data.software_product), instances: data.instances }
+  return {
+    software_product: unwrap(data.software_product),
+    instances: data.instances,
+    projects: data.projects ?? [],
+  }
 }
-export async function createSoftwareProduct(payload: SoftwareProductPayload): Promise<SoftwareProduct> {
+export async function createSoftwareProduct(
+  payload: SoftwareProductPayload,
+): Promise<SoftwareProduct> {
   const { data } = await api.post<{ data: SoftwareProduct }>('/infra/software-products', payload)
   return data.data
 }
@@ -70,7 +82,10 @@ export async function updateSoftwareProduct(
   id: number,
   payload: Partial<SoftwareProductPayload>,
 ): Promise<SoftwareProduct> {
-  const { data } = await api.put<{ data: SoftwareProduct }>(`/infra/software-products/${id}`, payload)
+  const { data } = await api.put<{ data: SoftwareProduct }>(
+    `/infra/software-products/${id}`,
+    payload,
+  )
   return data.data
 }
 export async function deleteSoftwareProduct(id: number): Promise<void> {
@@ -79,7 +94,9 @@ export async function deleteSoftwareProduct(id: number): Promise<void> {
 
 // Módulos de software
 export async function listSoftwareModules(productId: number): Promise<SoftwareModule[]> {
-  const { data } = await api.get<{ data: SoftwareModule[] }>(`/infra/software-products/${productId}/modules`)
+  const { data } = await api.get<{ data: SoftwareModule[] }>(
+    `/infra/software-products/${productId}/modules`,
+  )
   return data.data
 }
 export async function createSoftwareModule(
@@ -107,7 +124,9 @@ export async function deleteSoftwareModule(id: number): Promise<void> {
 export async function listClientSoftware(): Promise<ClientSoftware[]> {
   return fetchAllPages<ClientSoftware>('/infra/client-software')
 }
-export async function createClientSoftware(payload: ClientSoftwarePayload): Promise<ClientSoftware> {
+export async function createClientSoftware(
+  payload: ClientSoftwarePayload,
+): Promise<ClientSoftware> {
   const { data } = await api.post<{ data: ClientSoftware }>('/infra/client-software', payload)
   return data.data
 }
@@ -126,28 +145,34 @@ export async function syncClientSoftwareModules(
   id: number,
   modules: { software_module_id: number; active: boolean }[],
 ): Promise<ClientSoftware> {
-  const { data } = await api.put<{ data: ClientSoftware }>(`/infra/client-software/${id}/modules`, { modules })
+  const { data } = await api.put<{ data: ClientSoftware }>(`/infra/client-software/${id}/modules`, {
+    modules,
+  })
   return data.data
 }
 
 // Máquinas
-/** O endpoint é paginado (15 por página) — percorre todas as páginas. */
+/** O endpoint é paginado (15 por página), por isso percorre todas as páginas. */
 export async function listMachines(): Promise<Machine[]> {
   return fetchAllPages<Machine>('/infra/machines')
 }
 export async function getMachineOverview(
   machineId: number,
 ): Promise<{ machine: Machine; deployments: Deployment[] }> {
-  const { data } = await api.get<{ machine: Machine | { data: Machine }; deployments: Deployment[] }>(
-    `/infra/machines/${machineId}/overview`,
-  )
+  const { data } = await api.get<{
+    machine: Machine | { data: Machine }
+    deployments: Deployment[]
+  }>(`/infra/machines/${machineId}/overview`)
   return { machine: unwrap(data.machine), deployments: data.deployments }
 }
 export async function createMachine(payload: MachinePayload): Promise<Machine> {
   const { data } = await api.post<{ data: Machine }>('/infra/machines', payload)
   return data.data
 }
-export async function updateMachine(id: number, payload: Partial<MachinePayload>): Promise<Machine> {
+export async function updateMachine(
+  id: number,
+  payload: Partial<MachinePayload>,
+): Promise<Machine> {
   const { data } = await api.put<{ data: Machine }>(`/infra/machines/${id}`, payload)
   return data.data
 }
@@ -157,7 +182,7 @@ export async function deleteMachine(id: number): Promise<void> {
 
 // Deployments
 /**
- * O endpoint é paginado — percorre todas as páginas. `machineId` usa o filtro server-side
+ * O endpoint é paginado, por isso percorre todas as páginas. `machineId` usa o filtro server-side
  * `?machine_id=N`; mantemos um filtro defensivo no cliente (barato) para o caso de o backend
  * ainda não o suportar.
  */
@@ -172,7 +197,10 @@ export async function createDeployment(payload: DeploymentPayload): Promise<Depl
   const { data } = await api.post<{ data: Deployment }>('/infra/deployments', payload)
   return data.data
 }
-export async function updateDeployment(id: number, payload: Partial<DeploymentPayload>): Promise<Deployment> {
+export async function updateDeployment(
+  id: number,
+  payload: Partial<DeploymentPayload>,
+): Promise<Deployment> {
   const { data } = await api.put<{ data: Deployment }>(`/infra/deployments/${id}`, payload)
   return data.data
 }
@@ -184,14 +212,20 @@ export async function deleteDeployment(id: number): Promise<void> {
  * Rótulo legível de um deployment: componente, porta, cliente/produto (quando o backend os inclui
  * via `client_software.client` / `client_software.software_product`) e máquina (opcional).
  */
-export function deploymentLabel(deployment: Deployment, options: { machineName?: string } = {}): string {
+export function deploymentLabel(
+  deployment: Deployment,
+  options: { machineName?: string } = {},
+): string {
   const port = deployment.port ? ` :${deployment.port}` : ''
   const instance = deployment.client_software
-  const owner = [instance?.client?.name, instance?.software_product?.name].filter(Boolean).join(' / ')
+  const owner = [instance?.client?.name, instance?.software_product?.name]
+    .filter(Boolean)
+    .join(' / ')
   const machineName = options.machineName ?? deployment.machine?.name
+  // Ex.: "Pitruca / Level-School (full :8084) em Máquina 3".
+  const component = `${deployment.component}${port}`
   return [
-    `${deployment.component}${port}`,
-    owner ? ` — ${owner}` : '',
+    owner ? `${owner} (${component})` : component,
     machineName ? ` em ${machineName}` : '',
   ].join('')
 }
@@ -211,11 +245,10 @@ export function toTargetType(morphType: string): PolymorphicTargetType | null {
 
 /** Filtros server-side suportados por `GET /infra/credentials`. */
 export type CredentialFilter =
-  | { machine_id: number }
-  | { credentialable_type: PolymorphicTargetType; credentialable_id: number }
+  { machine_id: number } | { credentialable_type: PolymorphicTargetType; credentialable_id: number }
 
 /**
- * Lista credenciais (sem segredo — ver CredentialResource) com filtro server-side, percorrendo
+ * Lista credenciais (sem segredo, ver CredentialResource) com filtro server-side, percorrendo
  * todas as páginas. `?machine_id=N` devolve as credenciais da máquina e dos seus deployments.
  */
 export async function listCredentials(filter: CredentialFilter): Promise<Credential[]> {
@@ -227,7 +260,7 @@ export async function listMachineCredentials(machineId: number): Promise<Credent
   return listCredentials({ machine_id: machineId })
 }
 
-/** Remove `secret` do payload quando vazio — o backend trata `null` como "apagar o segredo". */
+/** Remove `secret` do payload quando vazio, porque o backend trata `null` como "apagar o segredo". */
 function withoutEmptySecret<T extends { secret?: string }>(payload: T): T {
   if (payload.secret == null || payload.secret === '') {
     const rest = { ...payload }
@@ -238,13 +271,22 @@ function withoutEmptySecret<T extends { secret?: string }>(payload: T): T {
 }
 
 export async function createCredential(payload: CreateCredentialPayload): Promise<Credential> {
-  const { data } = await api.post<{ data: Credential }>('/infra/credentials', withoutEmptySecret(payload))
+  const { data } = await api.post<{ data: Credential }>(
+    '/infra/credentials',
+    withoutEmptySecret(payload),
+  )
   return data.data
 }
 
-/** Na edição, um segredo vazio significa "manter o actual" — nunca é enviado. */
-export async function updateCredential(id: number, payload: UpdateCredentialPayload): Promise<Credential> {
-  const { data } = await api.put<{ data: Credential }>(`/infra/credentials/${id}`, withoutEmptySecret(payload))
+/** Na edição, um segredo vazio significa "manter o actual" e nunca é enviado. */
+export async function updateCredential(
+  id: number,
+  payload: UpdateCredentialPayload,
+): Promise<Credential> {
+  const { data } = await api.put<{ data: Credential }>(
+    `/infra/credentials/${id}`,
+    withoutEmptySecret(payload),
+  )
   return data.data
 }
 
@@ -277,7 +319,10 @@ export interface BackupPolicyPayload {
   next_run_at?: string | null
 }
 
-export type UpdateBackupPolicyPayload = Omit<BackupPolicyPayload, 'backupable_type' | 'backupable_id'>
+export type UpdateBackupPolicyPayload = Omit<
+  BackupPolicyPayload,
+  'backupable_type' | 'backupable_id'
+>
 
 /** Sem argumento lista todas; com `target` usa o filtro server-side `?backupable_type=&backupable_id=`. */
 export async function listBackupPolicies(target?: {
@@ -317,5 +362,7 @@ export async function getInfraAlerts(): Promise<InfraAlerts> {
 
 /** Os overviews embrulham resources dentro de `response()->json([...])`; aceita ambos os formatos. */
 function unwrap<T extends object>(value: T | { data: T }): T {
-  return 'data' in value && typeof value.data === 'object' && value.data !== null ? (value.data as T) : (value as T)
+  return 'data' in value && typeof value.data === 'object' && value.data !== null
+    ? (value.data as T)
+    : (value as T)
 }

@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Models\Projects;
 
+use App\Enums\Projects\SprintStatus;
 use App\Enums\Projects\TaskPriority;
 use App\Enums\Projects\TaskType;
 use App\Models\User;
 use Database\Factories\Projects\TaskFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -46,6 +49,32 @@ class Task extends Model
             'due_at' => 'date',
             'position' => 'integer',
         ];
+    }
+
+    /** Filtro `sprint=active|backlog|all` da listagem de tarefas do projecto. */
+    public const array SPRINT_FILTERS = ['active', 'backlog', 'all'];
+
+    /**
+     * - `active`: tarefas do sprint activo do projecto (nenhuma se não houver sprint activo);
+     * - `backlog`: tarefas sem sprint;
+     * - `all`: sem filtro.
+     *
+     * @param  Builder<Task>  $query
+     */
+    #[Scope]
+    protected function sprintFilter(Builder $query, string $filter): void
+    {
+        match ($filter) {
+            'active' => $query->whereIn(
+                'sprint_id',
+                Sprint::query()
+                    ->select('sprints.id')
+                    ->whereColumn('sprints.project_id', 'tasks.project_id')
+                    ->where('sprints.status', SprintStatus::Active->value),
+            ),
+            'backlog' => $query->whereNull('sprint_id'),
+            default => null,
+        };
     }
 
     /** @return BelongsTo<Project, $this> */

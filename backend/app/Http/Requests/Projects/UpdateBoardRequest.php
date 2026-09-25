@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Projects;
 
+use App\Models\Projects\Board;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateBoardRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var Board $board */
+        $board = $this->route('board');
+
+        return (bool) $this->user()?->can('manageBoard', $board->project);
     }
 
     /**

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { InfoTooltip } from './InfoTooltip'
 import { Label } from './Label'
 
 export function FieldError({ id, message }: { id: string; message?: string }) {
@@ -20,6 +21,7 @@ export function FormField({
   label,
   error,
   hint,
+  help,
   className,
   children,
 }: {
@@ -27,12 +29,21 @@ export function FormField({
   label: ReactNode
   error?: { message?: string }
   hint?: ReactNode
+  /** Ajuda contextual (ícone "?") mostrada ao lado da label, fora do `<label>`. */
+  help?: { label: string; text: ReactNode }
   className?: string
   children: ReactNode
 }) {
   return (
     <div className={cn('flex flex-col gap-1.5', className)}>
-      <Label htmlFor={id}>{label}</Label>
+      {help ? (
+        <div className="flex items-center gap-1">
+          <Label htmlFor={id}>{label}</Label>
+          <InfoTooltip label={help.label} text={help.text} />
+        </div>
+      ) : (
+        <Label htmlFor={id}>{label}</Label>
+      )}
       {children}
       {hint && !error && <p className="text-xs text-muted-foreground">{hint}</p>}
       <FieldError id={`${id}-error`} message={error?.message} />

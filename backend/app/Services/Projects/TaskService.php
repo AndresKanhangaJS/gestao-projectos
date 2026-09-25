@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Projects;
 
+use App\Enums\Projects\SprintStatus;
 use App\Enums\Projects\TaskPriority;
 use App\Enums\Projects\TaskType;
 use App\Models\Projects\BoardColumn;
@@ -30,12 +31,14 @@ class TaskService
     public function create(Project $project, array $data, User $actor): Task
     {
         $labelIds = $this->pullLabelIds($data);
+        $assigneeIds = $this->pullIds($data, 'assignee_ids') ?? [];
 
-        $data['reporter_id'] ??= $actor->id;
+        // O autor é sempre o utilizador autenticado (reporter_id não é aceite no input).
+        $data['reporter_id'] = $actor->id;
         $data['priority'] ??= TaskPriority::Medium->value;
         $data['position'] ??= $this->nextPosition((int) $data['board_column_id']);
 
-        return DB::transaction(function () use ($project, $data, $labelIds, $actor): Task {
+        $task = DB::transaction(function () use ($project, $data, $labelIds, $assigneeIds, $actor): Task {
             /** @var Task $task */
             $task = $project->tasks()->create($data);
 
@@ -45,8 +48,18 @@ class TaskService
 
             $this->activity->taskCreated($task, $actor);
 
+            if ($assigneeIds !== []) {
+                $task->assignees()->sync($assigneeIds);
+                $this->activity->assigneesChanged($task, $assigneeIds, [], $actor);
+            }
+
             return $task;
         });
+
+        // Fora da transacção: só notifica depois de a tarefa estar gravada (o actor é excluído).
+        $this->notifier->notifyNewAssignees($task, $actor, $assigneeIds);
+
+        return $task;
     }
 
     /**
@@ -89,7 +102,10 @@ class TaskService
     public function createSubtask(Task $parent, array $data, User $actor): Task
     {
         $data['parent_id'] = $parent->id;
-        $data['sprint_id'] = $parent->sprint_id;
+        // Herda o sprint da mãe, excepto se estiver concluído (aí fica no backlog).
+        $data['sprint_id'] = $parent->sprint !== null && $parent->sprint->status !== SprintStatus::Completed
+            ? $parent->sprint_id
+            : null;
         $data['board_column_id'] ??= $parent->board_column_id;
         $data['reporter_id'] = $actor->id;
         $data['type'] ??= TaskType::Task->value;
@@ -195,12 +211,24 @@ class TaskService
      */
     private function pullLabelIds(array &$data): ?array
     {
-        if (! array_key_exists('label_ids', $data)) {
+        return $this->pullIds($data, 'label_ids');
+    }
+
+    /**
+     * Remove uma lista de ids do payload (não é atributo do model).
+     * null = chave não enviada.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<int, int>|null
+     */
+    private function pullIds(array &$data, string $key): ?array
+    {
+        if (! array_key_exists($key, $data)) {
             return null;
         }
 
-        $raw = (array) $data['label_ids'];
-        unset($data['label_ids']);
+        $raw = (array) $data[$key];
+        unset($data[$key]);
 
         return array_values(array_map('intval', $raw));
     }

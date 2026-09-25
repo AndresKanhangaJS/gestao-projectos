@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -12,10 +13,17 @@ import {
 } from '@/api/infra'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 import { FormField, FormServerError } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
+import { ComboboxField } from '@/components/ui/ComboboxField'
 import { SelectField } from '@/components/ui/SelectField'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/Spinner'
 import { Textarea } from '@/components/ui/Textarea'
@@ -79,7 +87,11 @@ export function ClientSoftwareFormDialog({
       }
       return instance
         ? updateClientSoftware(instance.id, common)
-        : createClientSoftware({ ...common, client_id: clientId, software_product_id: Number(values.software_product_id) })
+        : createClientSoftware({
+            ...common,
+            client_id: clientId,
+            software_product_id: Number(values.software_product_id),
+          })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: infraRootKey })
@@ -96,18 +108,28 @@ export function ClientSoftwareFormDialog({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{instance ? 'Editar software do cliente' : 'Associar software ao cliente'}</DialogTitle>
+          <DialogTitle>
+            {instance ? 'Editar software do cliente' : 'Associar software ao cliente'}
+          </DialogTitle>
         </DialogHeader>
-        <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+        <form
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        >
           <FormField id="cs-product" label="Produto de software" error={errors.software_product_id}>
-            <SelectField
+            <ComboboxField
               control={control}
               name="software_product_id"
               id="cs-product"
               disabled={instance != null || productsQuery.isLoading}
               invalid={!!errors.software_product_id}
-              placeholder={productsQuery.isLoading ? 'A carregar…' : 'Seleccione…'}
-              options={(productsQuery.data ?? []).map((p) => ({ value: String(p.id), label: p.name }))}
+              placeholder={productsQuery.isLoading ? 'A carregar…' : 'Pesquise o software…'}
+              options={(productsQuery.data ?? []).map((p) => ({
+                value: String(p.id),
+                label: p.name,
+                description: p.category ?? undefined,
+              }))}
             />
           </FormField>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -124,7 +146,11 @@ export function ClientSoftwareFormDialog({
               />
             </FormField>
             <FormField id="cs-activated" label="Activado em" error={errors.activated_at}>
-              <Input type="date" {...fieldA11y('cs-activated', errors.activated_at)} {...register('activated_at')} />
+              <Input
+                type="date"
+                {...fieldA11y('cs-activated', errors.activated_at)}
+                {...register('activated_at')}
+              />
             </FormField>
           </div>
           <FormField id="cs-notes" label="Notas" error={errors.notes}>
@@ -141,7 +167,16 @@ export function ClientSoftwareFormDialog({
 }
 
 /** Activar/desactivar os módulos do produto para esta instalação (sincroniza todos de uma vez). */
-export function ClientSoftwareModulesDialog({ instance, onClose }: { instance: ClientSoftware; onClose: () => void }) {
+export function ClientSoftwareModulesDialog({
+  instance,
+  onClose,
+  canWrite = true,
+}: {
+  instance: ClientSoftware
+  onClose: () => void
+  /** Quem pode registar módulos no software (mostra a ligação para o fazer). */
+  canWrite?: boolean
+}) {
   const queryClient = useQueryClient()
   const modulesQuery = useQuery({
     queryKey: softwareModulesKey(instance.software_product_id),
@@ -155,7 +190,10 @@ export function ClientSoftwareModulesDialog({ instance, onClose }: { instance: C
     mutationFn: () =>
       syncClientSoftwareModules(
         instance.id,
-        (modulesQuery.data ?? []).map((m) => ({ software_module_id: m.id, active: active.has(m.id) })),
+        (modulesQuery.data ?? []).map((m) => ({
+          software_module_id: m.id,
+          active: active.has(m.id),
+        })),
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: infraRootKey })
@@ -180,7 +218,8 @@ export function ClientSoftwareModulesDialog({ instance, onClose }: { instance: C
         <DialogHeader>
           <DialogTitle>Módulos activos</DialogTitle>
           <DialogDescription>
-            {instance.software_product?.name ?? 'Software'} — seleccione os módulos que o cliente utiliza.
+            Seleccione os módulos de {instance.software_product?.name ?? 'este software'} que o
+            cliente utiliza.
           </DialogDescription>
         </DialogHeader>
         {modulesQuery.isLoading ? (
@@ -188,7 +227,22 @@ export function ClientSoftwareModulesDialog({ instance, onClose }: { instance: C
         ) : modulesQuery.isError ? (
           <ErrorState message="Não foi possível carregar os módulos." />
         ) : modules.length === 0 ? (
-          <EmptyState title="Este produto não tem módulos" description="Crie módulos na página do produto." />
+          <EmptyState
+            title="Este software ainda não tem módulos registados"
+            description="Os módulos registam-se uma vez no software e depois activam-se aqui, por cliente."
+            action={
+              canWrite ? (
+                <Button asChild size="sm">
+                  <Link
+                    to={`/infra/software/${instance.software_product_id}#modulos`}
+                    onClick={onClose}
+                  >
+                    Registar módulos deste software
+                  </Link>
+                </Button>
+              ) : undefined
+            }
+          />
         ) : (
           <ul className="flex flex-col gap-2" aria-label="Módulos">
             {modules.map((module) => {
@@ -217,7 +271,10 @@ export function ClientSoftwareModulesDialog({ instance, onClose }: { instance: C
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button disabled={mutation.isPending || modules.length === 0} onClick={() => mutation.mutate()}>
+          <Button
+            disabled={mutation.isPending || modules.length === 0}
+            onClick={() => mutation.mutate()}
+          >
             {mutation.isPending ? 'A guardar…' : 'Guardar módulos'}
           </Button>
         </div>

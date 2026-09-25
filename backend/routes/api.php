@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\Infra\AlertController;
 use App\Http\Controllers\Api\Infra\BackupPolicyController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\Api\Projects\BoardController;
 use App\Http\Controllers\Api\Projects\DashboardController;
 use App\Http\Controllers\Api\Projects\LabelController;
 use App\Http\Controllers\Api\Projects\ProjectController;
+use App\Http\Controllers\Api\Projects\ProjectLinkOptionsController;
 use App\Http\Controllers\Api\Projects\SearchController;
 use App\Http\Controllers\Api\Projects\SprintController;
 use App\Http\Controllers\Api\Projects\TaskAssigneeController;
@@ -25,7 +27,9 @@ use App\Http\Controllers\Api\Projects\TaskCommentController;
 use App\Http\Controllers\Api\Projects\TaskController;
 use App\Http\Controllers\Api\Projects\TaskRelationController;
 use App\Http\Controllers\Api\Projects\TaskWatcherController;
+use App\Http\Controllers\Api\Projects\UserController;
 use App\Http\Controllers\Api\Projects\WorkspaceController;
+use App\Http\Middleware\EnsurePasswordChanged;
 use Illuminate\Support\Facades\Route;
 
 // NOTA: o módulo "Gestão de Projectos" (App\Http\Controllers\Api\Projects\*)
@@ -38,16 +42,31 @@ Route::middleware('throttle:10,1')->group(function () {
     Route::post('login', [AuthController::class, 'login']);
 });
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('logout', [AuthController::class, 'logout']);
-    Route::get('me', [AuthController::class, 'me']);
+Route::middleware(['auth:sanctum', 'active', 'password.changed'])->group(function () {
+    // Permitidos mesmo com `must_change_password` (o utilizador tem de conseguir mudá-la ou sair).
+    Route::post('logout', [AuthController::class, 'logout'])->withoutMiddleware(EnsurePasswordChanged::class);
+    Route::get('me', [AuthController::class, 'me'])->withoutMiddleware(EnsurePasswordChanged::class);
+    Route::put('me/password', [AuthController::class, 'changePassword'])
+        ->withoutMiddleware(EnsurePasswordChanged::class)
+        ->middleware('throttle:6,1');
 
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
 });
 
-Route::middleware('auth:sanctum')->prefix('infra')->group(function () {
+// Gestão de utilizadores e papéis globais (partilhada; só `admin` — UserPolicy).
+Route::middleware(['auth:sanctum', 'active', 'password.changed'])->prefix('admin')->group(function () {
+    Route::get('roles', [AdminUserController::class, 'roles']);
+    Route::get('users', [AdminUserController::class, 'index']);
+    Route::post('users', [AdminUserController::class, 'store']);
+    Route::patch('users/{user}', [AdminUserController::class, 'update']);
+    Route::post('users/{user}/password', [AdminUserController::class, 'resetPassword']);
+    Route::post('users/{user}/deactivate', [AdminUserController::class, 'deactivate']);
+    Route::post('users/{user}/activate', [AdminUserController::class, 'activate']);
+});
+
+Route::middleware(['auth:sanctum', 'active', 'password.changed'])->prefix('infra')->group(function () {
     Route::apiResource('clients', ClientController::class);
     Route::get('clients/{client}/overview', [ClientController::class, 'overview']);
 
@@ -75,9 +94,12 @@ Route::middleware('auth:sanctum')->prefix('infra')->group(function () {
     Route::get('alerts', [AlertController::class, 'index']);
 });
 
-Route::middleware('auth:sanctum')->prefix('projects')->group(function () {
+Route::middleware(['auth:sanctum', 'active', 'password.changed'])->prefix('projects')->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index']);
     Route::get('search', [SearchController::class, 'index']);
+    // Tem de vir antes de `{project}` (senão "users" seria resolvido como id de projecto).
+    Route::get('users', [UserController::class, 'index']);
+    Route::get('link-options', [ProjectLinkOptionsController::class, 'index']);
 
     Route::apiResource('workspaces', WorkspaceController::class);
     Route::put('workspaces/{workspace}/members', [WorkspaceController::class, 'syncMembers']);
@@ -110,6 +132,7 @@ Route::middleware('auth:sanctum')->prefix('projects')->group(function () {
     Route::put('sprints/{sprint}', [SprintController::class, 'update']);
     Route::patch('sprints/{sprint}', [SprintController::class, 'update']);
     Route::delete('sprints/{sprint}', [SprintController::class, 'destroy']);
+    Route::post('sprints/{sprint}/complete', [SprintController::class, 'complete']);
 
     Route::get('{project}/labels', [LabelController::class, 'index']);
     Route::post('{project}/labels', [LabelController::class, 'store']);

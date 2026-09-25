@@ -32,8 +32,6 @@ class TaskCommentController extends Controller
         TaskNotifier $notifier,
         ActivityLogger $activity,
     ): JsonResponse {
-        $this->authorize('view', $task);
-
         /** @var TaskComment $comment */
         $comment = $task->comments()->create([
             'user_id' => $request->user()->id,

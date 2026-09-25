@@ -27,8 +27,6 @@ class TaskRelationController extends Controller
 
     public function store(StoreTaskRelationRequest $request, Task $task, ActivityLogger $activity): JsonResponse
     {
-        $this->authorize('update', $task);
-
         /** @var TaskRelation $relation */
         $relation = $task->relationsFrom()->create($request->validated());
         $relation->load('relatedTask');

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Projects;
 
+use App\Models\Projects\Workspace;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -11,7 +12,10 @@ class UpdateWorkspaceRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var Workspace $workspace */
+        $workspace = $this->route('workspace');
+
+        return (bool) $this->user()?->can('update', $workspace);
     }
 
     /**

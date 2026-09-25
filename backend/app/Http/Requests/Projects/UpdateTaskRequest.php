@@ -7,6 +7,7 @@ namespace App\Http\Requests\Projects;
 use App\Enums\Projects\TaskPriority;
 use App\Enums\Projects\TaskType;
 use App\Models\Projects\Task;
+use App\Rules\Projects\OpenSprint;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -15,7 +16,10 @@ class UpdateTaskRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var Task $task */
+        $task = $this->route('task');
+
+        return (bool) $this->user()?->can('update', $task);
     }
 
     /**
@@ -29,10 +33,12 @@ class UpdateTaskRequest extends FormRequest
 
         return [
             'sprint_id' => [
+                'bail',
                 'sometimes',
                 'nullable',
                 'integer',
                 Rule::exists('sprints', 'id')->where('project_id', $project->id),
+                new OpenSprint($task->sprint_id !== null ? (int) $task->sprint_id : null),
             ],
             'parent_id' => [
                 'sometimes',

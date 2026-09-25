@@ -204,7 +204,7 @@ return [
         'estimate' => 'estimativa',
         'starts_at' => 'data de início',
         'ends_at' => 'data de fim',
-        'due_at' => 'data limite',
+        'due_at' => 'prazo',
         'position' => 'posição',
         'color' => 'cor',
         'goal' => 'objectivo',

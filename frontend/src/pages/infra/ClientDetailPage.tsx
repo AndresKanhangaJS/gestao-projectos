@@ -5,7 +5,11 @@ import { Boxes, Pencil, Plus, Trash2 } from 'lucide-react'
 import { deleteClient, deleteClientSoftware, getClientOverview } from '@/api/infra'
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import { ClientFormDialog } from '@/components/infra/ClientFormDialog'
-import { ClientSoftwareFormDialog, ClientSoftwareModulesDialog } from '@/components/infra/ClientSoftwareDialogs'
+import {
+  ClientSoftwareFormDialog,
+  ClientSoftwareModulesDialog,
+} from '@/components/infra/ClientSoftwareDialogs'
+import { LinkedProjectsSection } from '@/components/infra/LinkedProjectsSection'
 import { clientOverviewKey, infraRootKey } from '@/components/infra/queryKeys'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -13,8 +17,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/Spinner'
 import { useInfraPermissions } from '@/hooks/useHasRole'
 import { isForbidden } from '@/lib/errors'
-import { formatDate } from '@/lib/format'
-import { CLIENT_SOFTWARE_STATUS_LABEL, CLIENT_STATUS_LABEL, DEPLOYMENT_COMPONENT_LABEL } from '@/lib/labels'
+import { EMPTY_VALUE, formatDate } from '@/lib/format'
+import {
+  CLIENT_SOFTWARE_STATUS_LABEL,
+  CLIENT_STATUS_LABEL,
+  DEPLOYMENT_COMPONENT_LABEL,
+} from '@/lib/labels'
 import type { ClientSoftware } from '@/types/infra'
 
 type InstanceDialog =
@@ -40,10 +48,18 @@ export default function ClientDetailPage() {
 
   if (isLoading) return <LoadingState />
   if (isError || !data) {
-    return <ErrorState message={isForbidden(error) ? 'Não tem acesso a este cliente.' : 'Não foi possível carregar o cliente.'} />
+    return (
+      <ErrorState
+        message={
+          isForbidden(error)
+            ? 'Não tem acesso a este cliente.'
+            : 'Não foi possível carregar o cliente.'
+        }
+      />
+    )
   }
 
-  const { client, software } = data
+  const { client, software, projects } = data
 
   return (
     <div className="flex flex-col gap-6">
@@ -75,17 +91,27 @@ export default function ClientDetailPage() {
         <CardContent className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
           <div>
             <p className="text-muted-foreground">Pessoa</p>
-            <p>{client.contact_name ?? '—'}</p>
+            <p className={client.contact_name ? undefined : 'text-muted-foreground'}>
+              {client.contact_name ?? EMPTY_VALUE}
+            </p>
           </div>
           <div>
             <p className="text-muted-foreground">Email</p>
-            <p>{client.contact_email ?? '—'}</p>
+            <p className={client.contact_email ? undefined : 'text-muted-foreground'}>
+              {client.contact_email ?? EMPTY_VALUE}
+            </p>
           </div>
           <div>
             <p className="text-muted-foreground">Telefone</p>
-            <p>{client.contact_phone ?? '—'}</p>
+            <p className={client.contact_phone ? undefined : 'text-muted-foreground'}>
+              {client.contact_phone ?? EMPTY_VALUE}
+            </p>
           </div>
-          {client.notes && <p className="whitespace-pre-wrap text-muted-foreground sm:col-span-3">{client.notes}</p>}
+          {client.notes && (
+            <p className="whitespace-pre-wrap text-muted-foreground sm:col-span-3">
+              {client.notes}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -107,15 +133,23 @@ export default function ClientDetailPage() {
               const name = cs.software_product?.name ?? `Software #${cs.software_product_id}`
               const activeModules = (cs.modules ?? []).filter((m) => m.active !== false)
               return (
-                <div key={cs.id} className="flex flex-col gap-2 rounded-md border border-border p-3">
+                <div
+                  key={cs.id}
+                  className="flex flex-col gap-2 rounded-md border border-border p-3"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <Link to={`/infra/software/${cs.software_product_id}`} className="font-medium text-primary hover:underline">
+                      <Link
+                        to={`/infra/software/${cs.software_product_id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
                         {name}
                       </Link>
                       <Badge>{CLIENT_SOFTWARE_STATUS_LABEL[cs.status] ?? cs.status}</Badge>
                       {cs.activated_at && (
-                        <span className="text-xs text-muted-foreground">desde {formatDate(cs.activated_at)}</span>
+                        <span className="text-xs text-muted-foreground">
+                          desde {formatDate(cs.activated_at)}
+                        </span>
                       )}
                     </div>
                     {canWrite && (
@@ -165,7 +199,10 @@ export default function ClientDetailPage() {
                         <li key={d.id}>
                           {DEPLOYMENT_COMPONENT_LABEL[d.component] ?? d.component}
                           {d.port ? ` :${d.port}` : ''} em{' '}
-                          <Link to={`/infra/machines/${d.machine_id}`} className="text-primary hover:underline">
+                          <Link
+                            to={`/infra/machines/${d.machine_id}`}
+                            className="text-primary hover:underline"
+                          >
                             {d.machine?.name ?? `Máquina #${d.machine_id}`}
                           </Link>
                         </li>
@@ -179,6 +216,12 @@ export default function ClientDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      <LinkedProjectsSection
+        projects={projects}
+        description="Projectos de desenvolvimento ou suporte feitos para este cliente."
+        emptyDescription="Para ligar um projecto a este cliente, edite o projecto e escolha o software e o cliente em “Relação com o cliente”."
+      />
 
       {editOpen && <ClientFormDialog open client={client} onOpenChange={setEditOpen} />}
       {instanceDialog?.kind === 'form' && (

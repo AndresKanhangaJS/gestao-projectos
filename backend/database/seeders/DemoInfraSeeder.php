@@ -90,6 +90,21 @@ class DemoInfraSeeder extends Seeder
             ], ['description' => 'API Laravel do Level-RH.']),
         ];
 
+        $levelSchoolModules = [
+            'Gestão Académica' => 'Permite gerir alunos, matrículas, turmas, classes, inscrições e anos lectivos.',
+            'Facturação' => 'Permite gerir mensalidades, facturas, recibos e pagamentos.',
+            'Lançamento de Notas' => 'Permite lançar, consultar e gerir avaliações e pautas.',
+            'Leitura QR' => 'Permite consultar informações académicas e financeiras através de QR Code.',
+            'Notificação por SMS' => 'Módulo responsável pelo envio e gestão de notificações, alertas e mensagens via SMS.',
+        ];
+
+        foreach ($levelSchoolModules as $name => $description) {
+            $modules["Level-School:{$name}"] = SoftwareModule::firstOrCreate([
+                'software_product_id' => $products['Level-School']->id,
+                'name' => $name,
+            ], ['description' => $description]);
+        }
+
         return [$products, $modules];
     }
 

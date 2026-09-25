@@ -47,6 +47,17 @@ export const SPRINT_STATUS_LABEL: Record<SprintStatus, string> = {
   completed: 'Concluído',
 }
 
+/** Opção "sem sprint" em todos os selectores de sprint (formulários e Backlog). */
+export const BACKLOG_OPTION_LABEL = 'Backlog do projecto (sem sprint)'
+
+/**
+ * Nome de um sprint num selector. Sprints concluídos não aceitam tarefas (a API responde 422):
+ * só aparecem quando são o sprint actual da tarefa, identificados como tal.
+ */
+export function sprintOptionLabel(sprint: { name: string; status: SprintStatus }): string {
+  return sprint.status === 'completed' ? `${sprint.name} (concluído)` : sprint.name
+}
+
 export const BACKUP_FREQUENCY_LABEL: Record<BackupFrequency, string> = {
   diario: 'Diário',
   semanal: 'Semanal',

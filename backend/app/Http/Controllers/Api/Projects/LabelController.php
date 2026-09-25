@@ -24,8 +24,6 @@ class LabelController extends Controller
 
     public function store(StoreLabelRequest $request, Project $project): JsonResponse
     {
-        $this->authorize('update', $project);
-
         $label = $project->labels()->create($request->validated());
 
         return LabelResource::make($label)->response()->setStatusCode(Response::HTTP_CREATED);
@@ -40,8 +38,6 @@ class LabelController extends Controller
 
     public function update(UpdateLabelRequest $request, Label $label): JsonResponse
     {
-        $this->authorize('update', $label->project);
-
         $label->update($request->validated());
 
         return LabelResource::make($label)->response();
@@ -49,7 +45,7 @@ class LabelController extends Controller
 
     public function destroy(Label $label): Response
     {
-        $this->authorize('delete', $label->project);
+        $this->authorize('manageLabels', $label->project);
 
         $label->delete();
 

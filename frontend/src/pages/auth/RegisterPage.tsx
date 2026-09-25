@@ -53,7 +53,9 @@ export default function RegisterPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Criar conta</CardTitle>
-          <CardDescription>Gestão de Projectos &amp; Controlo de Software — Level-Soft</CardDescription>
+          <CardDescription>
+            Level-Soft · Gestão de Projectos &amp; Controlo de Software
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form

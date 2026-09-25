@@ -10,6 +10,8 @@ interface AuthContextValue {
   login: (payload: LoginPayload) => Promise<void>
   logout: () => Promise<void>
   hasRole: (role: string) => boolean
+  /** Substitui o utilizador em cache (ex.: depois de alterar a palavra-passe). */
+  updateUser: (user: User) => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -52,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await logoutMutation.mutateAsync()
     },
     hasRole: (role) => Boolean(user?.roles?.includes(role)),
+    updateUser: (next) => queryClient.setQueryData(['auth', 'me'], next),
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

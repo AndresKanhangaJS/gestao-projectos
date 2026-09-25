@@ -12,6 +12,7 @@ use App\Http\Requests\Projects\UpdateWorkspaceRequest;
 use App\Http\Resources\Projects\WorkspaceResource;
 use App\Models\Projects\Workspace;
 use App\Services\Projects\ProjectDeletionService;
+use App\Services\Projects\WorkspaceMemberService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -27,15 +28,13 @@ class WorkspaceController extends Controller
             ? Workspace::query()
             : $user->workspaces()->getQuery();
 
-        $workspaces = $query->withCount(['members', 'projects'])->latest()->get();
+        $workspaces = $query->with(['owner', 'members'])->withCount(['members', 'projects'])->latest()->get();
 
         return WorkspaceResource::collection($workspaces)->response();
     }
 
     public function store(StoreWorkspaceRequest $request): JsonResponse
     {
-        $this->authorize('create', Workspace::class);
-
         $data = $request->validated();
         $data['slug'] = $this->uniqueSlug($data['slug'] ?? $data['name']);
         $data['owner_id'] = $request->user()->id;
@@ -59,8 +58,6 @@ class WorkspaceController extends Controller
 
     public function update(UpdateWorkspaceRequest $request, Workspace $workspace): JsonResponse
     {
-        $this->authorize('update', $workspace);
-
         $data = $request->validated();
         if (array_key_exists('slug', $data) && $data['slug']) {
             $data['slug'] = $this->uniqueSlug($data['slug'], $workspace->id);
@@ -82,15 +79,13 @@ class WorkspaceController extends Controller
     }
 
     /** Substitui a lista de membros do workspace e os respectivos papéis. */
-    public function syncMembers(SyncWorkspaceMembersRequest $request, Workspace $workspace): JsonResponse
-    {
-        $this->authorize('manageMembers', $workspace);
-
-        $sync = collect($request->validated('members'))
-            ->mapWithKeys(fn (array $member) => [$member['user_id'] => ['role' => $member['role']]])
-            ->all();
-
-        $workspace->members()->sync($sync);
+    public function syncMembers(
+        SyncWorkspaceMembersRequest $request,
+        Workspace $workspace,
+        WorkspaceMemberService $members,
+    ): JsonResponse {
+        // Retira também responsáveis que saíram ou passaram a leitor (ver WorkspaceMemberService).
+        $members->sync($workspace, $request->validated('members'), $request->user());
 
         return WorkspaceResource::make($workspace->fresh(['owner', 'members']))->response();
     }
