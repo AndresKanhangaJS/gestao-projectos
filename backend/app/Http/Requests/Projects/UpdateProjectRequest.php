@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Projects;
 
 use App\Enums\Projects\ProjectStatus;
+use App\Http\Requests\Projects\Concerns\NormalizesProjectKey;
 use App\Http\Requests\Projects\Concerns\ValidatesProjectLinks;
 use App\Models\Projects\Project;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,6 +15,7 @@ use Illuminate\Validation\Validator;
 
 class UpdateProjectRequest extends FormRequest
 {
+    use NormalizesProjectKey;
     use ValidatesProjectLinks;
 
     public function authorize(): bool
@@ -29,7 +31,7 @@ class UpdateProjectRequest extends FormRequest
         $project = $this->project();
 
         return [
-            'key' => ['sometimes', 'required', 'string', 'max:20', Rule::unique('projects', 'key')->ignore($project)],
+            'key' => ['sometimes', 'required', 'string', 'min:2', 'max:20', 'regex:'.self::KEY_PATTERN, Rule::unique('projects', 'key')->ignore($project)],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', 'nullable', new Enum(ProjectStatus::class)],

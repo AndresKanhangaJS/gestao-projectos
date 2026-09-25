@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState, type ChangeEvent } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -25,6 +25,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { applyServerErrors, emptyToNull, fieldA11y } from '@/lib/forms'
 import { HELP } from '@/lib/help'
 import type { Project, Workspace } from '@/types/projects'
+import { normalizeProjectKey, suggestProjectKey } from './projectKey'
 import { selectableModules } from './projectLink'
 import { projectKey, projectLinkOptionsKey, projectsKey, workspacesKey } from './queryKeys'
 
@@ -34,8 +35,12 @@ const schema = z.object({
     .string()
     .trim()
     .min(1, 'A chave é obrigatória.')
+    .min(2, 'A chave tem de ter pelo menos 2 caracteres.')
     .max(20, 'A chave não pode ter mais de 20 caracteres.')
-    .regex(/^[A-Za-z0-9_-]+$/, 'Use apenas letras, números, hífen ou underscore.'),
+    .regex(
+      /^[A-Za-z0-9][A-Za-z0-9_-]*$/,
+      'Use apenas letras, números, "-" ou "_", começando por letra ou número.',
+    ),
   name: z
     .string()
     .trim()
@@ -111,6 +116,9 @@ export function ProjectFormDialog({
       module_ids: (project?.modules ?? []).map((m) => m.id),
     },
   })
+
+  /** Passa a true quando o utilizador escreve a chave; a partir daí deixa de ser sugerida. */
+  const [keyEdited, setKeyEdited] = useState(editing)
 
   const productId = useWatch({ control, name: 'software_product_id' })
   const clientId = useWatch({ control, name: 'client_id' })
@@ -208,16 +216,34 @@ export function ProjectFormDialog({
               />
             </FormField>
           )}
-          <FormField id="p-key" label="Chave (ex.: PROJ)" error={errors.key}>
+          <FormField id="p-name" label="Nome" error={errors.name}>
             <Input
-              maxLength={20}
-              className="uppercase"
-              {...fieldA11y('p-key', errors.key)}
-              {...register('key')}
+              {...fieldA11y('p-name', errors.name)}
+              {...register('name', {
+                onChange: (event: ChangeEvent<HTMLInputElement>) => {
+                  // Na criação, a chave acompanha o nome até o utilizador a editar à mão.
+                  if (!editing && !keyEdited) {
+                    setValue('key', suggestProjectKey(event.target.value))
+                  }
+                },
+              })}
             />
           </FormField>
-          <FormField id="p-name" label="Nome" error={errors.name}>
-            <Input {...fieldA11y('p-name', errors.name)} {...register('name')} />
+          <FormField id="p-key" label="Chave" error={errors.key} help={HELP.projectKey}>
+            <Input
+              maxLength={20}
+              placeholder="ex.: GPS"
+              autoCapitalize="characters"
+              {...fieldA11y('p-key', errors.key)}
+              {...register('key', {
+                setValueAs: (value: string) => normalizeProjectKey(value),
+                onChange: (event: ChangeEvent<HTMLInputElement>) => {
+                  setKeyEdited(event.target.value.trim() !== '')
+                  const normalized = normalizeProjectKey(event.target.value)
+                  if (normalized !== event.target.value) event.target.value = normalized
+                },
+              })}
+            />
           </FormField>
           <FormField id="p-description" label="Descrição" error={errors.description}>
             <Textarea

@@ -124,6 +124,10 @@ export const HELP = {
   },
 
   // Ligação do projecto ao cliente
+  projectKey: {
+    label: 'Chave do projecto',
+    text: 'Um código curto e único que identifica o projecto (ex.: GPS, RH, SCHOOL). Serve para o referir de forma rápida em conversas, emails e relatórios, mesmo quando há projectos com nomes parecidos. É sugerida a partir do nome, fica sempre em maiúsculas e pode ser alterada depois.',
+  },
   projectLink: {
     label: 'Relação com o cliente',
     text: 'Opcional. Um software pode estar instalado em vários clientes, e cada instalação tem os seus módulos activos. Escolha o software, depois (se o trabalho for para um cliente) o cliente, e por fim os módulos envolvidos.',

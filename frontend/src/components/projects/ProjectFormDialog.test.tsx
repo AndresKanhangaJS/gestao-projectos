@@ -123,7 +123,7 @@ describe('ProjectFormDialog: relação com o cliente', () => {
     )
     expect(screen.getByRole('checkbox', { name: 'Salários' })).not.toBeChecked()
 
-    await user.type(screen.getByLabelText('Chave (ex.: PROJ)'), 'rh')
+    await user.type(screen.getByLabelText('Chave'), 'rh')
     await user.type(screen.getByLabelText('Nome'), 'Salários 2027')
     await user.click(screen.getByRole('button', { name: 'Criar projecto' }))
 
@@ -143,7 +143,7 @@ describe('ProjectFormDialog: relação com o cliente', () => {
     const user = userEvent.setup()
     renderDialog()
 
-    await user.type(screen.getByLabelText('Chave (ex.: PROJ)'), 'pit')
+    await user.type(screen.getByLabelText('Chave'), 'pit')
     await user.type(screen.getByLabelText('Nome'), 'Portal de propinas')
     await pick(user, /^software/i, /Level-School/)
     await pick(user, /^cliente/i, /^Pitruca$/)
@@ -157,6 +157,22 @@ describe('ProjectFormDialog: relação com o cliente', () => {
       client_id: 100,
       module_ids: [12],
     })
+  })
+
+  it('sugere a chave a partir do nome até ser editada à mão', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+    const key = screen.getByLabelText('Chave') as HTMLInputElement
+
+    await user.type(screen.getByLabelText('Nome'), 'Gestão de Projectos')
+    expect(key.value).toBe('GP')
+
+    await user.clear(key)
+    await user.type(key, 'gps x')
+    expect(key.value).toBe('GPSX')
+
+    await user.type(screen.getByLabelText('Nome'), ' Level')
+    expect(key.value).toBe('GPSX')
   })
 
   it('edita a ligação de um projecto existente e mostra o erro 422 junto ao campo', async () => {
