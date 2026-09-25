@@ -9,8 +9,11 @@ use App\Http\Requests\Infra\StoreClientRequest;
 use App\Http\Requests\Infra\UpdateClientRequest;
 use App\Http\Resources\Infra\ClientResource;
 use App\Http\Resources\Infra\ClientSoftwareResource;
+use App\Http\Resources\Projects\ProjectSummaryResource;
 use App\Models\Infra\Client;
+use App\Models\Projects\Project;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class ClientController extends Controller
@@ -53,7 +56,7 @@ class ClientController extends Controller
     }
 
     /** Vista cruzada: cliente + todas as suas instâncias de software com módulos activos e estado. */
-    public function overview(Client $client): JsonResponse
+    public function overview(Request $request, Client $client): JsonResponse
     {
         $this->authorize('view', $client);
 
@@ -63,9 +66,17 @@ class ClientController extends Controller
             'clientSoftware.deployments.machine',
         ]);
 
+        // Vista cruzada: projectos ligados a este cliente, visíveis ao utilizador.
+        $projects = Project::query()
+            ->visibleTo($request->user())
+            ->where('client_id', $client->id)
+            ->orderBy('name')
+            ->get();
+
         return response()->json([
             'client' => new ClientResource($client),
             'software' => ClientSoftwareResource::collection($client->clientSoftware),
+            'projects' => ProjectSummaryResource::collection($projects),
         ]);
     }
 }

@@ -13,11 +13,17 @@ import { Label } from '@/components/ui/Label'
 import { Textarea } from '@/components/ui/Textarea'
 import { applyServerErrors, fieldA11y } from '@/lib/forms'
 import { formatDateTime } from '@/lib/format'
+import { HELP } from '@/lib/help'
 import { PRIORITY_LABEL, PRIORITY_VARIANT } from '@/lib/labels'
 import type { SubtaskSummary, TaskComment } from '@/types/projects'
+import { SectionHeading } from './PeopleAndLabels'
 
 const subtaskSchema = z.object({
-  title: z.string().trim().min(1, 'Indique o título da subtarefa.').max(255, 'O título não pode ter mais de 255 caracteres.'),
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Indique o título da subtarefa.')
+    .max(255, 'O título não pode ter mais de 255 caracteres.'),
 })
 type SubtaskValues = z.infer<typeof subtaskSchema>
 
@@ -26,11 +32,13 @@ export function SubtasksSection({
   subtasks,
   onOpenTask,
   onChanged,
+  readOnly = false,
 }: {
   taskId: number
   subtasks: SubtaskSummary[]
   onOpenTask: (taskId: number) => void
   onChanged: () => void
+  readOnly?: boolean
 }) {
   const inputId = `task-${taskId}-new-subtask`
   const {
@@ -48,16 +56,24 @@ export function SubtasksSection({
       onChanged()
     },
     onError: (error) =>
-      applyServerErrors(error, setError, { fields: ['title'], fallback: 'Não foi possível criar a subtarefa.' }),
+      applyServerErrors(error, setError, {
+        fields: ['title'],
+        fallback: 'Não foi possível criar a subtarefa.',
+      }),
   })
 
   const done = subtasks.filter((s) => s.completed).length
 
   return (
     <section aria-labelledby={`task-${taskId}-subtasks`}>
-      <h3 id={`task-${taskId}-subtasks`} className="mb-2 text-sm font-semibold">
-        Subtarefas {subtasks.length > 0 && <span className="font-normal text-muted-foreground">({done}/{subtasks.length} concluídas)</span>}
-      </h3>
+      <SectionHeading id={`task-${taskId}-subtasks`} help={HELP.subtasks}>
+        Subtarefas{' '}
+        {subtasks.length > 0 && (
+          <span className="font-normal text-muted-foreground">
+            ({done}/{subtasks.length} concluídas)
+          </span>
+        )}
+      </SectionHeading>
       {subtasks.length === 0 ? (
         <p className="mb-2 text-sm text-muted-foreground">Sem subtarefas.</p>
       ) : (
@@ -77,24 +93,36 @@ export function SubtasksSection({
                 {subtask.title}
               </button>
               {subtask.column && <Badge variant="outline">{subtask.column.name}</Badge>}
-              <Badge variant={PRIORITY_VARIANT[subtask.priority]}>{PRIORITY_LABEL[subtask.priority]}</Badge>
+              <Badge variant={PRIORITY_VARIANT[subtask.priority]}>
+                {PRIORITY_LABEL[subtask.priority]}
+              </Badge>
             </li>
           ))}
         </ul>
       )}
-      <form className="flex flex-col gap-1" noValidate onSubmit={handleSubmit((values) => mutation.mutate(values))}>
-        <Label htmlFor={inputId} className="sr-only">
-          Título da nova subtarefa
-        </Label>
-        <div className="flex gap-2">
-          <Input placeholder="Nova subtarefa…" {...fieldA11y(inputId, errors.title)} {...register('title')} />
-          <Button type="submit" disabled={mutation.isPending}>
-            Adicionar
-          </Button>
-        </div>
-        <FieldError id={`${inputId}-error`} message={errors.title?.message} />
-        <FormServerError message={errors.root?.server?.message} />
-      </form>
+      {!readOnly && (
+        <form
+          className="flex flex-col gap-1"
+          noValidate
+          onSubmit={handleSubmit((values) => mutation.mutate(values))}
+        >
+          <Label htmlFor={inputId} className="sr-only">
+            Título da nova subtarefa
+          </Label>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Nova subtarefa…"
+              {...fieldA11y(inputId, errors.title)}
+              {...register('title')}
+            />
+            <Button type="submit" disabled={mutation.isPending}>
+              Adicionar
+            </Button>
+          </div>
+          <FieldError id={`${inputId}-error`} message={errors.title?.message} />
+          <FormServerError message={errors.root?.server?.message} />
+        </form>
+      )}
     </section>
   )
 }
@@ -129,10 +157,15 @@ export function CommentsSection({
       onChanged()
     },
     onError: (error) =>
-      applyServerErrors(error, setError, { fields: ['body'], fallback: 'Não foi possível publicar o comentário.' }),
+      applyServerErrors(error, setError, {
+        fields: ['body'],
+        fallback: 'Não foi possível publicar o comentário.',
+      }),
   })
 
-  const ordered = [...comments].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
+  const ordered = [...comments].sort(
+    (a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id,
+  )
 
   return (
     <section aria-labelledby={`task-${taskId}-comments`}>
@@ -150,7 +183,9 @@ export function CommentsSection({
               </Avatar>
               <div className="min-w-0 flex-1 rounded-md bg-muted p-2">
                 <p className="mb-1 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">{comment.user?.name ?? 'Utilizador removido'}</span>
+                  <span className="font-medium text-foreground">
+                    {comment.user?.name ?? 'Utilizador removido'}
+                  </span>
                   {' · '}
                   <time dateTime={comment.created_at}>{formatDateTime(comment.created_at)}</time>
                 </p>
@@ -160,11 +195,19 @@ export function CommentsSection({
           ))}
         </ul>
       )}
-      <form className="flex flex-col gap-2" noValidate onSubmit={handleSubmit((values) => mutation.mutate(values))}>
+      <form
+        className="flex flex-col gap-2"
+        noValidate
+        onSubmit={handleSubmit((values) => mutation.mutate(values))}
+      >
         <Label htmlFor={inputId} className="sr-only">
           Novo comentário
         </Label>
-        <Textarea placeholder="Escreva um comentário…" {...fieldA11y(inputId, errors.body)} {...register('body')} />
+        <Textarea
+          placeholder="Escreva um comentário…"
+          {...fieldA11y(inputId, errors.body)}
+          {...register('body')}
+        />
         <FieldError id={`${inputId}-error`} message={errors.body?.message} />
         <FormServerError message={errors.root?.server?.message} />
         <Button type="submit" disabled={mutation.isPending} className="self-end">

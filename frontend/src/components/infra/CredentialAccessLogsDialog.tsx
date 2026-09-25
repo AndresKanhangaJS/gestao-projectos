@@ -1,16 +1,35 @@
 import { useQuery } from '@tanstack/react-query'
 import { listCredentialAccessLogs } from '@/api/infra'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/Spinner'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table'
 import { isForbidden } from '@/lib/errors'
-import { formatDateTime } from '@/lib/format'
+import { EMPTY_VALUE, formatDateTime } from '@/lib/format'
 import { CREDENTIAL_TYPE_LABEL } from '@/lib/labels'
 import type { Credential } from '@/types/infra'
 import { credentialAccessLogsKey } from './queryKeys'
 
 /** Histórico de revelações de segredo de uma credencial (só admin). */
-export function CredentialAccessLogsDialog({ credential, onClose }: { credential: Credential; onClose: () => void }) {
+export function CredentialAccessLogsDialog({
+  credential,
+  onClose,
+}: {
+  credential: Credential
+  onClose: () => void
+}) {
   const query = useQuery({
     queryKey: credentialAccessLogsKey(credential.id),
     queryFn: () => listCredentialAccessLogs(credential.id),
@@ -20,12 +39,13 @@ export function CredentialAccessLogsDialog({ credential, onClose }: { credential
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Histórico de acessos</DialogTitle>
           <DialogDescription>
             Credencial {CREDENTIAL_TYPE_LABEL[credential.type] ?? credential.type}
-            {credential.username ? ` · ${credential.username}` : ''} — cada revelação do segredo fica registada.
+            {credential.username ? ` · ${credential.username}` : ''}. Cada revelação do segredo fica
+            registada.
           </DialogDescription>
         </DialogHeader>
         {query.isLoading ? (
@@ -53,8 +73,12 @@ export function CredentialAccessLogsDialog({ credential, onClose }: { credential
               {logs.map((log) => (
                 <TableRow key={log.id}>
                   <TableCell>{formatDateTime(log.accessed_at ?? log.created_at)}</TableCell>
-                  <TableCell>{log.user?.name ?? '—'}</TableCell>
-                  <TableCell className="font-mono text-xs">{log.ip_address ?? '—'}</TableCell>
+                  <TableCell>{log.user?.name ?? 'Utilizador removido'}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {log.ip_address ?? (
+                      <span className="font-sans text-muted-foreground">{EMPTY_VALUE}</span>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

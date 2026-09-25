@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/Spinner'
 import { formatDateTime } from '@/lib/format'
 
-const linkClass = 'font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+const linkClass =
+  'font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
 
 function AlertGroup({
   id,
@@ -41,7 +42,9 @@ function AlertGroup({
         {count === 0 ? (
           <EmptyState title={emptyTitle} />
         ) : (
-          <ul className="flex flex-col divide-y divide-border rounded-md border border-border">{children}</ul>
+          <ul className="flex flex-col divide-y divide-border rounded-md border border-border">
+            {children}
+          </ul>
         )}
       </CardContent>
     </Card>
@@ -49,7 +52,10 @@ function AlertGroup({
 }
 
 export default function AlertsPage() {
-  const { data, isLoading, isError } = useQuery({ queryKey: ['infra', 'alerts'], queryFn: getInfraAlerts })
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['infra', 'alerts'],
+    queryFn: getInfraAlerts,
+  })
 
   if (isLoading) return <LoadingState label="A carregar alertas…" />
   if (isError || !data) return <ErrorState message="Não foi possível carregar os alertas." />
@@ -66,18 +72,22 @@ export default function AlertsPage() {
       <AlertGroup
         id="alerts-tradicional"
         title="Máquinas em ambiente Tradicional"
-        description="Máquinas sem Docker — candidatas a migração."
+        description="Máquinas sem Docker, candidatas a migração."
         icon={<Server className="h-4 w-4" aria-hidden="true" />}
         count={machines_tradicional.length}
         emptyTitle="Todas as máquinas usam Docker"
       >
         {machines_tradicional.map((machine) => (
-          <li key={machine.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+          <li
+            key={machine.id}
+            className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
+          >
             <Link to={`/infra/machines/${machine.id}`} className={linkClass}>
               {machine.name}
             </Link>
             <span className="text-muted-foreground">
-              {machine.ip_address ?? 'IP desconhecido'} · {machine.operating_system ?? 'SO desconhecido'}
+              {machine.ip_address ?? 'IP desconhecido'} ·{' '}
+              {machine.operating_system ?? 'SO desconhecido'}
             </span>
           </li>
         ))}
@@ -92,7 +102,10 @@ export default function AlertsPage() {
         emptyTitle="Todos os softwares têm política de backup"
       >
         {software_without_backup.map((instance) => (
-          <li key={instance.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+          <li
+            key={instance.id}
+            className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
+          >
             <span>
               <Link to={`/infra/clients/${instance.client_id}`} className={linkClass}>
                 {instance.client?.name ?? `Cliente #${instance.client_id}`}
@@ -120,18 +133,24 @@ export default function AlertsPage() {
         {deployments_not_recently_checked.map((deployment) => {
           const instance = deployment.client_software
           return (
-            <li key={deployment.id} className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm">
+            <li
+              key={deployment.id}
+              className="flex flex-wrap items-center justify-between gap-2 p-3 text-sm"
+            >
               <span>
                 <span className="capitalize">{deployment.component}</span>
                 {deployment.port ? ` :${deployment.port}` : ''}
                 {instance && (
                   <>
-                    {' — '}
+                    {': '}
                     <Link to={`/infra/clients/${instance.client_id}`} className={linkClass}>
                       {instance.client?.name ?? `Cliente #${instance.client_id}`}
                     </Link>
                     {instance.software_product && (
-                      <span className="text-muted-foreground"> · {instance.software_product.name}</span>
+                      <span className="text-muted-foreground">
+                        {' '}
+                        · {instance.software_product.name}
+                      </span>
                     )}
                   </>
                 )}

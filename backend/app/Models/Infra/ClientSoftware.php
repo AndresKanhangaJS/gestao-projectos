@@ -30,6 +30,7 @@ class ClientSoftware extends Model
         ];
     }
 
+    /** @return BelongsTo<Client, $this> */
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
@@ -40,12 +41,40 @@ class ClientSoftware extends Model
         return $this->belongsTo(SoftwareProduct::class);
     }
 
-    /** Módulos activos/inactivos nesta instância. */
+    /**
+     * Módulos activos/inactivos nesta instância.
+     *
+     * @return BelongsToMany<SoftwareModule, $this>
+     */
     public function modules(): BelongsToMany
     {
         return $this->belongsToMany(SoftwareModule::class, 'client_software_modules')
             ->withPivot('active')
             ->withTimestamps();
+    }
+
+    /**
+     * Módulos activos nesta instância, ou `null` = TODOS os módulos do produto.
+     *
+     * Convenção (não há flag dedicada): uma instância SEM linhas em
+     * `client_software_modules` tem o software completo (todos os módulos);
+     * assim que há linhas, só as com `active = true` estão activas.
+     *
+     * @return list<int>|null
+     */
+    public function activeModuleIds(): ?array
+    {
+        $modules = $this->relationLoaded('modules') ? $this->modules : $this->modules()->get();
+
+        if ($modules->isEmpty()) {
+            return null;
+        }
+
+        return $modules
+            ->filter(fn (SoftwareModule $module): bool => (bool) $module->getAttribute('pivot')?->getAttribute('active'))
+            ->map(fn (SoftwareModule $module): int => (int) $module->getKey())
+            ->values()
+            ->all();
     }
 
     /** Onde esta instância está implantada. */

@@ -7,15 +7,16 @@ namespace Tests\Feature\Projects;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Tests\Feature\Infra\Concerns\CreatesInfraRoles;
 use Tests\TestCase;
 
 class WorkspaceProjectBoardTest extends TestCase
 {
-    use RefreshDatabase;
+    use CreatesInfraRoles, RefreshDatabase;
 
     public function test_user_can_create_workspace_project_board_and_column(): void
     {
-        $user = User::factory()->create();
+        $user = $this->userWithRole('project_manager');
         Sanctum::actingAs($user);
 
         $workspaceResponse = $this->postJson('/api/projects/workspaces', [
@@ -66,7 +67,7 @@ class WorkspaceProjectBoardTest extends TestCase
 
     public function test_user_without_workspace_membership_cannot_create_project(): void
     {
-        $owner = User::factory()->create();
+        $owner = $this->userWithRole('project_manager');
         $outsider = User::factory()->create();
 
         Sanctum::actingAs($owner);

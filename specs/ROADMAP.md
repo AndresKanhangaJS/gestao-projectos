@@ -14,6 +14,7 @@ Ver `PRD.md` §4. Entregue nesta ronda de trabalho — checklist de aceitação 
 - Notificações em tempo real via WebSockets (Laravel Reverb + Laravel Echo) e emails transaccionais.
 - Integrações externas: Slack, email de entrada, webhooks de saída.
 - Templates de projecto reutilizáveis.
+- Portal do cliente: papel client_viewer ligado a um cliente, com acesso de leitura aos projectos desse cliente. (Hoje o papel `client_viewer` existe só como dado de referência no `RolesAndPermissionsSeeder` e não é atribuível por nenhum endpoint/UI; os projectos já podem estar ligados a um cliente via `projects.client_id`.)
 
 ## Fase 2 — Controlo de Software avançado
 

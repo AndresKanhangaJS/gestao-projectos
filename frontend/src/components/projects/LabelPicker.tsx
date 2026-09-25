@@ -11,22 +11,37 @@ import { Input } from '@/components/ui/Input'
 import { Label as FieldLabel } from '@/components/ui/Label'
 import { Spinner } from '@/components/ui/Spinner'
 import { applyServerErrors, fieldA11y } from '@/lib/forms'
+import { canCreateLabels } from '@/lib/projectPermissions'
 import { cn } from '@/lib/utils'
 import type { Label } from '@/types/projects'
 import { projectLabelsKey } from './queryKeys'
+import { useProjectPermissions } from './useProjectData'
 
 const DEFAULT_COLOR = '#6366f1'
 
 const newLabelSchema = z.object({
-  name: z.string().trim().min(1, 'O nome da etiqueta é obrigatório.').max(255, 'O nome não pode ter mais de 255 caracteres.'),
+  name: z
+    .string()
+    .trim()
+    .min(1, 'O nome da etiqueta é obrigatório.')
+    .max(255, 'O nome não pode ter mais de 255 caracteres.'),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Cor inválida.'),
 })
 type NewLabelValues = z.infer<typeof newLabelSchema>
 
-export function LabelChip({ label, className }: { label: Pick<Label, 'name' | 'color'>; className?: string }) {
+export function LabelChip({
+  label,
+  className,
+}: {
+  label: Pick<Label, 'name' | 'color'>
+  className?: string
+}) {
   return (
     <span
-      className={cn('inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs', className)}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs',
+        className,
+      )}
     >
       <span
         className="h-2 w-2 rounded-full"
@@ -57,8 +72,12 @@ export function LabelPicker({
 }) {
   const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
-  const labelsQuery = useQuery({ queryKey: projectLabelsKey(projectId), queryFn: () => listLabels(projectId) })
+  const labelsQuery = useQuery({
+    queryKey: projectLabelsKey(projectId),
+    queryFn: () => listLabels(projectId),
+  })
   const selected = new Set(value)
+  const canCreate = canCreateLabels(useProjectPermissions(projectId))
 
   const {
     register,
@@ -74,14 +93,20 @@ export function LabelPicker({
   const createMutation = useMutation({
     mutationFn: (values: NewLabelValues) => createLabel(projectId, values),
     onSuccess: (label) => {
-      queryClient.setQueryData<Label[]>(projectLabelsKey(projectId), (old) => [...(old ?? []), label])
+      queryClient.setQueryData<Label[]>(projectLabelsKey(projectId), (old) => [
+        ...(old ?? []),
+        label,
+      ])
       queryClient.invalidateQueries({ queryKey: projectLabelsKey(projectId) })
       onChange([...value, label.id])
       reset({ name: '', color: DEFAULT_COLOR })
       setCreating(false)
     },
     onError: (error) =>
-      applyServerErrors(error, setError, { fields: ['name', 'color'], fallback: 'Não foi possível criar a etiqueta.' }),
+      applyServerErrors(error, setError, {
+        fields: ['name', 'color'],
+        fallback: 'Não foi possível criar a etiqueta.',
+      }),
   })
 
   const submitNew = handleSubmit((values) => createMutation.mutate(values))
@@ -116,7 +141,10 @@ export function LabelPicker({
                   isSelected ? 'ring-2 ring-primary' : 'opacity-70 hover:opacity-100',
                 )}
               >
-                <LabelChip label={label} className={isSelected ? 'bg-muted font-medium' : undefined} />
+                <LabelChip
+                  label={label}
+                  className={isSelected ? 'bg-muted font-medium' : undefined}
+                />
               </button>
             )
           })}
@@ -153,7 +181,12 @@ export function LabelPicker({
                 {...register('color')}
               />
             </div>
-            <Button type="button" size="sm" onClick={() => void submitNew()} disabled={createMutation.isPending}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => void submitNew()}
+              disabled={createMutation.isPending}
+            >
               Criar
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(false)}>
@@ -164,7 +197,7 @@ export function LabelPicker({
           <FieldError id={`${idPrefix}-new-label-color-error`} message={errors.color?.message} />
           <FormServerError message={errors.root?.server?.message} />
         </div>
-      ) : (
+      ) : canCreate ? (
         <Button
           type="button"
           size="sm"
@@ -176,7 +209,7 @@ export function LabelPicker({
           <Plus className="h-4 w-4" aria-hidden="true" />
           Nova etiqueta
         </Button>
-      )}
+      ) : null}
     </div>
   )
 }

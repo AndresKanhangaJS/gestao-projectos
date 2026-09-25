@@ -49,6 +49,8 @@ erDiagram
     PROJECTS {
         bigint id PK
         bigint workspace_id FK
+        bigint software_product_id FK "nullable (Controlo de Software)"
+        bigint client_id FK "nullable (Controlo de Software)"
         string key UK "ex: PROJ"
         string name
         text description
@@ -252,6 +254,27 @@ erDiagram
         timestamp next_run_at
     }
 ```
+
+## 2.1 Ligação entre módulos — Projecto ↔ Controlo de Software
+
+```mermaid
+erDiagram
+    SOFTWARE_PRODUCTS ||--o{ PROJECTS : "projectos sobre (nullable)"
+    CLIENTS ||--o{ PROJECTS : "projectos para (nullable)"
+    PROJECTS ||--o{ PROJECT_SOFTWARE_MODULE : abrange
+    SOFTWARE_MODULES ||--o{ PROJECT_SOFTWARE_MODULE : "abrangido por"
+
+    PROJECT_SOFTWARE_MODULE {
+        bigint id PK
+        bigint project_id FK "cascade"
+        bigint software_module_id FK "cascade"
+    }
+```
+
+- Tudo opcional: `projects.software_product_id` e `projects.client_id` são FKs nullable com `nullOnDelete` (apagar o produto/cliente não apaga o projecto); `project_software_module` tem `unique(project_id, software_module_id)` e cascata nos dois lados.
+- Coerência (validada em `Store/UpdateProjectRequest`): `client_id` exige `software_product_id` e uma instalação (`CLIENT_SOFTWARE`) desse produto nesse cliente; cada módulo pertence ao produto e, havendo cliente, tem de estar activo na instalação desse cliente.
+- **"Todos os módulos"**: não há flag dedicada. Uma instalação `CLIENT_SOFTWARE` **sem linhas** em `CLIENT_SOFTWARE_MODULES` tem o software completo (todos os módulos activos); havendo linhas, só as com `active = true` contam (`ClientSoftware::activeModuleIds()`, `null` = todos).
+- A ligação entre módulos existe só ao nível de models/relações (`Project::softwareProduct()/client()/modules()`); os controllers continuam separados. O formulário de projecto usa `GET /api/projects/link-options` (só ids/nomes), e os overviews de cliente/software do módulo Infra listam os projectos ligados visíveis ao utilizador.
 
 ## 3. Notas de modelação
 

@@ -1,7 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { RequireRole } from '@/components/layout/RequireRole'
-import { INFRA_VIEW_ROLES } from '@/lib/roles'
+import { ADMIN_ROLES, INFRA_VIEW_ROLES } from '@/lib/roles'
 import LoginPage from '@/pages/auth/LoginPage'
 import NoAccessPage from '@/pages/NoAccessPage'
 import * as Pages from '@/routes/lazyPages'
@@ -11,6 +11,8 @@ const { LazyPage } = Pages
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <LazyPage component={Pages.RegisterPage} /> },
+  // Fora do AppLayout: é acessível (e obrigatória) com palavra-passe provisória.
+  { path: '/change-password', element: <LazyPage component={Pages.ChangePasswordPage} /> },
   {
     path: '/',
     element: <AppLayout />,
@@ -27,13 +29,25 @@ export const router = createBrowserRouter([
           { path: 'clients', element: <LazyPage component={Pages.ClientsPage} /> },
           { path: 'clients/:clientId', element: <LazyPage component={Pages.ClientDetailPage} /> },
           { path: 'software', element: <LazyPage component={Pages.SoftwareProductsPage} /> },
-          { path: 'software/:productId', element: <LazyPage component={Pages.SoftwareProductDetailPage} /> },
+          {
+            path: 'software/:productId',
+            element: <LazyPage component={Pages.SoftwareProductDetailPage} />,
+          },
           { path: 'machines', element: <LazyPage component={Pages.MachinesPage} /> },
-          { path: 'machines/:machineId', element: <LazyPage component={Pages.MachineDetailPage} /> },
+          {
+            path: 'machines/:machineId',
+            element: <LazyPage component={Pages.MachineDetailPage} />,
+          },
           { path: 'deployments', element: <LazyPage component={Pages.DeploymentsPage} /> },
           { path: 'backups', element: <LazyPage component={Pages.BackupPoliciesPage} /> },
           { path: 'alerts', element: <LazyPage component={Pages.AlertsPage} /> },
         ],
+      },
+      {
+        // Gestão de utilizadores: só admin (a API responde 403 aos restantes).
+        path: 'admin',
+        element: <RequireRole roles={ADMIN_ROLES} />,
+        children: [{ path: 'users', element: <LazyPage component={Pages.UsersPage} /> }],
       },
       { path: 'no-access', element: <NoAccessPage /> },
     ],

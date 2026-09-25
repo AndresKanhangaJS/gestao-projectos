@@ -26,7 +26,9 @@ function withClient(ui: React.ReactNode) {
 
 describe('BoardFormDialog', () => {
   beforeEach(() => {
-    createBoardMock.mockReset().mockResolvedValue({ id: 9, project_id: 1, name: 'Q', is_default: true, columns: [] })
+    createBoardMock
+      .mockReset()
+      .mockResolvedValue({ id: 9, project_id: 1, name: 'Q', is_default: true, columns: [] })
     createColumnMock.mockReset()
   })
 
@@ -54,18 +56,23 @@ describe('BoardFormDialog', () => {
     await user.click(screen.getByRole('button', { name: /criar quadro/i }))
 
     await waitFor(() => expect(createBoardMock).toHaveBeenCalledTimes(1))
-    expect(createBoardMock.mock.calls[0][1]).toMatchObject({ name: 'Suporte', with_default_columns: false })
+    expect(createBoardMock.mock.calls[0][1]).toMatchObject({
+      name: 'Suporte',
+      with_default_columns: false,
+    })
     expect(createColumnMock).not.toHaveBeenCalled()
   })
 })
 
-describe('ColumnsManagerDialog — apagar coluna', () => {
+describe('ColumnsManagerDialog: apagar coluna', () => {
   const board: Board = {
     id: 3,
     project_id: 1,
     name: 'Principal',
     is_default: true,
-    columns: [{ id: 21, board_id: 3, name: 'Em curso', position: 0, color: null, is_done_column: false }],
+    columns: [
+      { id: 21, board_id: 3, name: 'Em curso', position: 0, color: null, is_done_column: false },
+    ],
   }
 
   it('mostra a mensagem 422 da API quando a coluna tem tarefas', async () => {
@@ -90,7 +97,9 @@ describe('ColumnsManagerDialog — apagar coluna', () => {
     await user.click(within(confirm).getByRole('button', { name: 'Apagar' }))
 
     expect(
-      await within(confirm).findByText('Não é possível apagar a coluna “Em curso”: tem 3 tarefa(s).'),
+      await within(confirm).findByText(
+        'Não é possível apagar a coluna “Em curso”: tem 3 tarefa(s).',
+      ),
     ).toBeInTheDocument()
     expect(deleteColumnMock).toHaveBeenCalledWith(21)
   })

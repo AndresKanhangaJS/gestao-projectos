@@ -38,18 +38,32 @@ class Workspace extends Model
             ->withTimestamps();
     }
 
-    /** Projectos pertencentes a este workspace. */
+    /**
+     * Projectos pertencentes a este workspace.
+     *
+     * @return HasMany<Project, $this>
+     */
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class);
     }
 
-    /** Papel do utilizador neste workspace (ou null se não for membro). */
+    /**
+     * Papel do utilizador neste workspace (ou null se não for membro).
+     *
+     * Se a relação `members` já estiver carregada usa-a (sem query extra) —
+     * as Resources calculam várias permissões por workspace/projecto e isto
+     * evita N queries repetidas; caso contrário consulta a pivot.
+     */
     public function memberRole(User $user): ?WorkspaceRole
     {
-        $pivot = $this->members()->where('users.id', $user->id)->first()?->pivot;
+        $member = $this->relationLoaded('members')
+            ? $this->members->firstWhere('id', $user->id)
+            : $this->members()->where('users.id', $user->id)->first();
 
-        return $pivot ? WorkspaceRole::from((string) $pivot->getAttribute('role')) : null;
+        $role = $member?->getAttribute('pivot')?->getAttribute('role');
+
+        return $role !== null ? WorkspaceRole::from((string) $role) : null;
     }
 
     public function hasMember(User $user): bool

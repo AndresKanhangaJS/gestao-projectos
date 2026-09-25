@@ -9,8 +9,11 @@ use App\Http\Requests\Infra\StoreSoftwareProductRequest;
 use App\Http\Requests\Infra\UpdateSoftwareProductRequest;
 use App\Http\Resources\Infra\ClientSoftwareResource;
 use App\Http\Resources\Infra\SoftwareProductResource;
+use App\Http\Resources\Projects\ProjectSummaryResource;
 use App\Models\Infra\SoftwareProduct;
+use App\Models\Projects\Project;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
 class SoftwareProductController extends Controller
@@ -57,7 +60,7 @@ class SoftwareProductController extends Controller
     }
 
     /** Vista cruzada: produto + todas as instâncias de clientes que o usam, com máquina/porta via deployments. */
-    public function overview(SoftwareProduct $softwareProduct): JsonResponse
+    public function overview(Request $request, SoftwareProduct $softwareProduct): JsonResponse
     {
         $this->authorize('view', $softwareProduct);
 
@@ -66,9 +69,17 @@ class SoftwareProductController extends Controller
             'clientSoftware.deployments.machine',
         ]);
 
+        // Vista cruzada: projectos sobre este software, visíveis ao utilizador.
+        $projects = Project::query()
+            ->visibleTo($request->user())
+            ->where('software_product_id', $softwareProduct->id)
+            ->orderBy('name')
+            ->get();
+
         return response()->json([
             'software_product' => new SoftwareProductResource($softwareProduct),
             'instances' => ClientSoftwareResource::collection($softwareProduct->clientSoftware),
+            'projects' => ProjectSummaryResource::collection($projects),
         ]);
     }
 }

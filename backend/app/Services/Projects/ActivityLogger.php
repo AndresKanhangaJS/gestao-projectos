@@ -42,7 +42,7 @@ class ActivityLogger
         'parent_id' => 'tarefa-mãe',
         'estimate' => 'estimativa',
         'starts_at' => 'data de início',
-        'due_at' => 'data limite',
+        'due_at' => 'prazo',
     ];
 
     private const int COMMENT_EXCERPT_LENGTH = 120;

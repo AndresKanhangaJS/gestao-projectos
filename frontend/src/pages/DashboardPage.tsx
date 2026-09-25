@@ -21,7 +21,13 @@ function statusRows(byStatus: DashboardData['by_status']): { label: string; tota
   return Object.entries(byStatus).map(([label, total]) => ({ label, total }))
 }
 
-function CountList({ rows, emptyTitle }: { rows: { label: string; total: number }[]; emptyTitle: string }) {
+function CountList({
+  rows,
+  emptyTitle,
+}: {
+  rows: { label: string; total: number }[]
+  emptyTitle: string
+}) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyTitle}</p>
   return (
     <ul className="flex flex-col gap-2">
@@ -49,7 +55,10 @@ function InfraAlertsSummary() {
     ? [
         { label: 'Máquinas em ambiente Tradicional', total: data.machines_tradicional.length },
         { label: 'Softwares sem backup', total: data.software_without_backup.length },
-        { label: 'Deployments sem verificação recente', total: data.deployments_not_recently_checked.length },
+        {
+          label: 'Deployments sem verificação recente',
+          total: data.deployments_not_recently_checked.length,
+        },
       ]
     : []
   const total = rows.reduce((sum, row) => sum + row.total, 0)
@@ -75,7 +84,9 @@ function InfraAlertsSummary() {
             {rows.map((row) => (
               <li key={row.label} className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">{row.label}</span>
-                <span className={row.total > 0 ? 'font-medium text-warning' : 'font-medium'}>{row.total}</span>
+                <span className={row.total > 0 ? 'font-medium text-warning' : 'font-medium'}>
+                  {row.total}
+                </span>
               </li>
             ))}
           </ul>
@@ -116,7 +127,9 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle>Tarefas atrasadas</CardTitle>
           </CardHeader>
-          <CardContent className="text-3xl font-bold text-destructive">{data.overdue_tasks_count}</CardContent>
+          <CardContent className="text-3xl font-bold text-destructive">
+            {data.overdue_tasks_count}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
@@ -160,7 +173,7 @@ export default function DashboardPage() {
         {byStatus.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Tarefas por estado</CardTitle>
+              <CardTitle>Tarefas por coluna</CardTitle>
             </CardHeader>
             <CardContent>
               <CountList rows={byStatus} emptyTitle="Sem tarefas." />
@@ -177,7 +190,7 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           {data.tasks_per_assignee.length === 0 ? (
-            <EmptyState title="Ainda não há tarefas atribuídas" />
+            <EmptyState title="Ainda não há tarefas com responsável" />
           ) : (
             <CountList
               emptyTitle=""

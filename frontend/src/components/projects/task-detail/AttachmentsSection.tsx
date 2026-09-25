@@ -1,7 +1,12 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, Paperclip, Trash2, Upload } from 'lucide-react'
-import { deleteAttachment, downloadAttachment, listAttachments, uploadAttachment } from '@/api/tasks'
+import {
+  deleteAttachment,
+  downloadAttachment,
+  listAttachments,
+  uploadAttachment,
+} from '@/api/tasks'
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
@@ -13,12 +18,23 @@ import { MutationError } from './PeopleAndLabels'
 /** Limite do backend (`max:10240` KB). Validação só de UX. */
 const MAX_BYTES = 10 * 1024 * 1024
 
-export function AttachmentsSection({ taskId, onChanged }: { taskId: number; onChanged: () => void }) {
+export function AttachmentsSection({
+  taskId,
+  onChanged,
+  readOnly = false,
+}: {
+  taskId: number
+  onChanged: () => void
+  readOnly?: boolean
+}) {
   const queryClient = useQueryClient()
   const fileInput = useRef<HTMLInputElement>(null)
   const [clientError, setClientError] = useState<string | null>(null)
   const [toDelete, setToDelete] = useState<TaskAttachment | null>(null)
-  const attachmentsQuery = useQuery({ queryKey: taskAttachmentsKey(taskId), queryFn: () => listAttachments(taskId) })
+  const attachmentsQuery = useQuery({
+    queryKey: taskAttachmentsKey(taskId),
+    queryFn: () => listAttachments(taskId),
+  })
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: taskAttachmentsKey(taskId) })
@@ -54,17 +70,32 @@ export function AttachmentsSection({ taskId, onChanged }: { taskId: number; onCh
         <h3 id={`task-${taskId}-attachments`} className="text-sm font-semibold">
           Anexos
         </h3>
-        <input
-          ref={fileInput}
-          id={inputId}
-          type="file"
-          className="sr-only"
-          onChange={(event) => handleFile(event.target.files?.[0])}
-        />
-        <Button size="sm" variant="outline" disabled={uploadMutation.isPending} onClick={() => fileInput.current?.click()}>
-          {uploadMutation.isPending ? <Spinner /> : <Upload className="h-4 w-4" aria-hidden="true" />}
-          {uploadMutation.isPending ? 'A enviar…' : 'Anexar ficheiro'}
-        </Button>
+        {!readOnly && (
+          <>
+            <input
+              ref={fileInput}
+              id={inputId}
+              type="file"
+              className="sr-only"
+              tabIndex={-1}
+              aria-label="Ficheiro a anexar"
+              onChange={(event) => handleFile(event.target.files?.[0])}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={uploadMutation.isPending}
+              onClick={() => fileInput.current?.click()}
+            >
+              {uploadMutation.isPending ? (
+                <Spinner />
+              ) : (
+                <Upload className="h-4 w-4" aria-hidden="true" />
+              )}
+              {uploadMutation.isPending ? 'A enviar…' : 'Anexar ficheiro'}
+            </Button>
+          </>
+        )}
       </div>
       {clientError && (
         <p className="text-sm text-destructive" role="alert">
@@ -72,7 +103,10 @@ export function AttachmentsSection({ taskId, onChanged }: { taskId: number; onCh
         </p>
       )}
       <MutationError error={uploadMutation.error} fallback="Não foi possível enviar o ficheiro." />
-      <MutationError error={downloadMutation.error} fallback="Não foi possível transferir o ficheiro." />
+      <MutationError
+        error={downloadMutation.error}
+        fallback="Não foi possível transferir o ficheiro."
+      />
 
       {attachmentsQuery.isLoading ? (
         <Spinner />
@@ -88,7 +122,8 @@ export function AttachmentsSection({ taskId, onChanged }: { taskId: number; onCh
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{attachment.original_name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {attachment.uploader?.name ?? '—'} · {formatDateTime(attachment.created_at)}
+                  {attachment.uploader?.name ?? 'Utilizador removido'} ·{' '}
+                  {formatDateTime(attachment.created_at)}
                 </p>
               </div>
               <Button
@@ -101,15 +136,17 @@ export function AttachmentsSection({ taskId, onChanged }: { taskId: number; onCh
               >
                 <Download className="h-4 w-4" aria-hidden="true" />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 text-destructive"
-                onClick={() => setToDelete(attachment)}
-                aria-label={`Apagar ${attachment.original_name}`}
-              >
-                <Trash2 className="h-4 w-4" aria-hidden="true" />
-              </Button>
+              {!readOnly && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-destructive"
+                  onClick={() => setToDelete(attachment)}
+                  aria-label={`Apagar ${attachment.original_name}`}
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                </Button>
+              )}
             </li>
           ))}
         </ul>
@@ -120,7 +157,11 @@ export function AttachmentsSection({ taskId, onChanged }: { taskId: number; onCh
         item={toDelete}
         onClose={() => setToDelete(null)}
         title="Apagar anexo?"
-        description={toDelete ? `O ficheiro “${toDelete.original_name}” será removido permanentemente.` : undefined}
+        description={
+          toDelete
+            ? `O ficheiro “${toDelete.original_name}” será removido permanentemente.`
+            : undefined
+        }
         remove={(attachment) => deleteAttachment(taskId, attachment.id)}
         onDeleted={refresh}
         errorFallback="Não foi possível apagar o anexo."

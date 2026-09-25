@@ -47,6 +47,11 @@ class TaskNotificationDispatchTest extends TestCase
 
         $workspace = Workspace::factory()->create(['owner_id' => $this->actor->id]);
         $workspace->members()->attach($this->actor->id, ['role' => WorkspaceRole::Owner->value]);
+        // Responsáveis têm de ser membros do workspace.
+        $workspace->members()->attach([
+            $this->alice->id => ['role' => WorkspaceRole::Member->value],
+            $this->bruno->id => ['role' => WorkspaceRole::Member->value],
+        ]);
 
         $this->project = Project::factory()->create(['workspace_id' => $workspace->id]);
         $board = Board::factory()->create(['project_id' => $this->project->id]);

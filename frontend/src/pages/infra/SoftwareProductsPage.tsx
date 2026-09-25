@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Boxes, Pencil, Plus, Trash2 } from 'lucide-react'
 import { deleteSoftwareProduct, listSoftwareProducts } from '@/api/infra'
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import { SoftwareProductFormDialog } from '@/components/infra/SoftwareProductFormDialog'
@@ -18,7 +18,10 @@ export default function SoftwareProductsPage() {
   const { canWrite } = useInfraPermissions()
   const [editing, setEditing] = useState<{ product: SoftwareProduct | null } | null>(null)
   const [toDelete, setToDelete] = useState<SoftwareProduct | null>(null)
-  const { data, isLoading, isError } = useQuery({ queryKey: softwareProductsKey, queryFn: listSoftwareProducts })
+  const { data, isLoading, isError } = useQuery({
+    queryKey: softwareProductsKey,
+    queryFn: listSoftwareProducts,
+  })
 
   if (isLoading) return <LoadingState />
   if (isError) return <ErrorState message="Não foi possível carregar os produtos de software." />
@@ -77,16 +80,25 @@ export default function SoftwareProductsPage() {
                   </div>
                 )}
               </CardHeader>
-              <CardContent className="flex flex-wrap gap-1.5">
-                {product.modules?.length ? (
-                  product.modules.map((module) => (
-                    <Badge key={module.id} variant="outline">
-                      {module.name}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-xs text-muted-foreground">Sem módulos.</span>
-                )}
+              <CardContent className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-1.5">
+                  {product.modules?.length ? (
+                    product.modules.map((module) => (
+                      <Badge key={module.id} variant="outline">
+                        {module.name}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Sem módulos registados.</span>
+                  )}
+                </div>
+                <Button asChild size="sm" variant="outline" className="self-start">
+                  <Link to={`/infra/software/${product.id}#modulos`}>
+                    <Boxes className="h-4 w-4" aria-hidden="true" />
+                    {canWrite ? 'Gerir módulos' : 'Ver módulos'}
+                    <span className="sr-only"> de {product.name}</span>
+                  </Link>
+                </Button>
               </CardContent>
             </Card>
           ))}

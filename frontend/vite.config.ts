@@ -13,6 +13,9 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // Em Docker Desktop no Windows os eventos de ficheiros do bind mount não
+    // chegam ao contentor; sem polling o Vite serve versões antigas dos módulos.
+    watch: process.env.VITE_USE_POLLING === 'true' ? { usePolling: true, interval: 300 } : undefined,
     proxy: {
       // nginx fala HTTP e sabe encaminhar para o php-fpm (app) via fastcgi;
       // o vite nao consegue falar fastcgi directamente com o app, por isso aponta para o nginx.

@@ -17,6 +17,7 @@ import { isForbidden } from '@/lib/errors'
 import { MACHINE_ACCESS_TYPE_LABEL } from '@/lib/labels'
 import type { Deployment, Machine } from '@/types/infra'
 import { EnvironmentBadge } from '@/components/infra/EnvironmentBadge'
+import { EMPTY_VALUE } from '@/lib/format'
 
 function credentialTargets(machine: Machine, deployments: Deployment[]): CredentialTarget[] {
   return [
@@ -46,7 +47,15 @@ export default function MachineDetailPage() {
 
   if (isLoading) return <LoadingState />
   if (isError || !data) {
-    return <ErrorState message={isForbidden(error) ? 'Não tem acesso a esta máquina.' : 'Não foi possível carregar a máquina.'} />
+    return (
+      <ErrorState
+        message={
+          isForbidden(error)
+            ? 'Não tem acesso a esta máquina.'
+            : 'Não foi possível carregar a máquina.'
+        }
+      />
+    )
   }
 
   const { machine, deployments } = data
@@ -79,21 +88,33 @@ export default function MachineDetailPage() {
         <CardContent className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
           <div>
             <p className="text-muted-foreground">IP</p>
-            <p>{machine.ip_address ?? '—'}</p>
+            <p className={machine.ip_address ? undefined : 'text-muted-foreground'}>
+              {machine.ip_address ?? EMPTY_VALUE}
+            </p>
           </div>
           <div>
             <p className="text-muted-foreground">SO</p>
-            <p>{machine.operating_system ?? '—'}</p>
+            <p className={machine.operating_system ? undefined : 'text-muted-foreground'}>
+              {machine.operating_system ?? EMPTY_VALUE}
+            </p>
           </div>
           <div>
             <p className="text-muted-foreground">Acesso</p>
-            <p>{machine.access_type ? MACHINE_ACCESS_TYPE_LABEL[machine.access_type] : '—'}</p>
+            <p className={machine.access_type ? undefined : 'text-muted-foreground'}>
+              {machine.access_type ? MACHINE_ACCESS_TYPE_LABEL[machine.access_type] : EMPTY_VALUE}
+            </p>
           </div>
           <div>
             <p className="text-muted-foreground">Utilizador</p>
-            <p>{machine.access_user ?? '—'}</p>
+            <p className={machine.access_user ? undefined : 'text-muted-foreground'}>
+              {machine.access_user ?? EMPTY_VALUE}
+            </p>
           </div>
-          {machine.notes && <p className="col-span-full whitespace-pre-wrap text-muted-foreground">{machine.notes}</p>}
+          {machine.notes && (
+            <p className="col-span-full whitespace-pre-wrap text-muted-foreground">
+              {machine.notes}
+            </p>
+          )}
         </CardContent>
       </Card>
 

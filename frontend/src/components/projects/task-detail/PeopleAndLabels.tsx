@@ -1,18 +1,15 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { Eye, EyeOff } from 'lucide-react'
-import { getProject } from '@/api/projects'
 import { syncAssignees, toggleWatch, updateTask } from '@/api/tasks'
-import { getWorkspace } from '@/api/workspaces'
 import { useAuth } from '@/context/AuthContext'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Checkbox } from '@/components/ui/Checkbox'
-import { Label } from '@/components/ui/Label'
-import { Spinner } from '@/components/ui/Spinner'
+import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { mutationErrorMessage } from '@/lib/errors'
+import { HELP } from '@/lib/help'
 import type { Task, UserSummary } from '@/types/projects'
-import { LabelPicker } from '../LabelPicker'
-import { projectKey, workspaceKey } from '../queryKeys'
+import { AssigneePicker } from '../AssigneePicker'
+import { LabelChip, LabelPicker } from '../LabelPicker'
 
 export function MutationError({ error, fallback }: { error: unknown; fallback?: string }) {
   if (!error) return null
@@ -23,102 +20,129 @@ export function MutationError({ error, fallback }: { error: unknown; fallback?: 
   )
 }
 
-/** Responsáveis: membros do workspace do projecto, com checkbox que sincroniza imediatamente. */
-export function AssigneesSection({ task, onUpdated }: { task: Task; onUpdated: (task: Task) => void }) {
-  const projectQuery = useQuery({ queryKey: projectKey(task.project_id), queryFn: () => getProject(task.project_id) })
-  const workspaceId = projectQuery.data?.workspace_id
-  const workspaceQuery = useQuery({
-    queryKey: workspaceKey(workspaceId ?? 0),
-    queryFn: () => getWorkspace(workspaceId as number),
-    enabled: workspaceId != null,
-  })
+/** Título de secção do detalhe da tarefa, com ajuda contextual opcional. */
+export function SectionHeading({
+  id,
+  children,
+  help,
+}: {
+  id: string
+  children: React.ReactNode
+  help?: { label: string; text: string }
+}) {
+  return (
+    <div className="mb-2 flex items-center gap-1">
+      <h3 id={id} className="text-sm font-semibold">
+        {children}
+      </h3>
+      {help && <InfoTooltip label={help.label} text={help.text} />}
+    </div>
+  )
+}
 
+/**
+ * Responsáveis: só membros do workspace do projecto que não sejam leitores (a API rejeita
+ * outros com 422); cada alteração sincroniza imediatamente. Em leitura, mostra só os nomes.
+ */
+export function AssigneesSection({
+  task,
+  onAssigneesChanged,
+  readOnly = false,
+}: {
+  task: Task
+  /** Recebe a lista actualizada devolvida pela API. */
+  onAssigneesChanged: (assignees: UserSummary[]) => void
+  readOnly?: boolean
+}) {
   const mutation = useMutation({
     mutationFn: (userIds: number[]) => syncAssignees(task.id, userIds),
-    onSuccess: onUpdated,
+    onSuccess: onAssigneesChanged,
   })
-
   const assigned = task.assignees ?? []
-  const assignedIds = new Set(assigned.map((a) => a.id))
-  // Candidatos = membros do workspace + responsáveis actuais que já não sejam membros.
-  const candidates: UserSummary[] = [
-    ...(workspaceQuery.data?.members ?? []),
-    ...assigned.filter((a) => !(workspaceQuery.data?.members ?? []).some((m) => m.id === a.id)),
-  ]
-
-  function toggle(userId: number, checked: boolean) {
-    const next = checked ? [...assignedIds, userId] : [...assignedIds].filter((id) => id !== userId)
-    mutation.mutate(next)
-  }
+  const headingId = `task-${task.id}-assignees`
 
   return (
-    <section aria-labelledby={`task-${task.id}-assignees`}>
-      <h3 id={`task-${task.id}-assignees`} className="mb-2 text-sm font-semibold">
+    <section aria-labelledby={headingId}>
+      <SectionHeading id={headingId} help={HELP.assignees}>
         Responsáveis
-      </h3>
-      {projectQuery.isLoading || workspaceQuery.isLoading ? (
-        <Spinner />
-      ) : candidates.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Sem membros disponíveis no workspace.</p>
+      </SectionHeading>
+      {readOnly ? (
+        assigned.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sem responsáveis.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {assigned.map((a) => (
+              <Badge key={a.id} variant="secondary">
+                {a.name}
+              </Badge>
+            ))}
+          </div>
+        )
       ) : (
-        <ul className="flex flex-wrap gap-x-4 gap-y-2">
-          {candidates.map((user) => {
-            const inputId = `task-${task.id}-assignee-${user.id}`
-            return (
-              <li key={user.id} className="flex items-center gap-1.5">
-                <Checkbox
-                  id={inputId}
-                  checked={assignedIds.has(user.id)}
-                  disabled={mutation.isPending}
-                  onCheckedChange={(checked) => toggle(user.id, checked === true)}
-                />
-                <Label htmlFor={inputId} className="font-normal">
-                  {user.name}
-                </Label>
-              </li>
-            )
-          })}
-        </ul>
+        <AssigneePicker
+          projectId={task.project_id}
+          idPrefix={`task-${task.id}`}
+          value={assigned.map((a) => a.id)}
+          current={assigned}
+          disabled={mutation.isPending}
+          onChange={(ids) => mutation.mutate(ids)}
+        />
       )}
-      {workspaceQuery.isError && assigned.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {assigned.map((a) => (
-            <Badge key={a.id} variant="secondary">
-              {a.name}
-            </Badge>
-          ))}
-        </div>
-      )}
-      <MutationError error={mutation.error} fallback="Não foi possível actualizar os responsáveis." />
+      <MutationError
+        error={mutation.error}
+        fallback="Não foi possível actualizar os responsáveis."
+      />
     </section>
   )
 }
 
 /** Etiquetas da tarefa (selecção/criação de etiquetas do projecto); grava via `label_ids`. */
-export function LabelsSection({ task, onUpdated }: { task: Task; onUpdated: (task: Task) => void }) {
+export function LabelsSection({
+  task,
+  onUpdated,
+  readOnly = false,
+}: {
+  task: Task
+  onUpdated: (task: Task) => void
+  readOnly?: boolean
+}) {
   const mutation = useMutation({
     mutationFn: (labelIds: number[]) => updateTask(task.id, { label_ids: labelIds }),
     onSuccess: onUpdated,
   })
+  const headingId = `task-${task.id}-labels`
+  const labels = task.labels ?? []
 
   return (
-    <section aria-labelledby={`task-${task.id}-labels`}>
-      <h3 id={`task-${task.id}-labels`} className="mb-2 text-sm font-semibold">
+    <section aria-labelledby={headingId}>
+      <SectionHeading id={headingId} help={HELP.labels}>
         Etiquetas
-      </h3>
-      <LabelPicker
-        projectId={task.project_id}
-        idPrefix={`task-${task.id}`}
-        value={(task.labels ?? []).map((l) => l.id)}
-        onChange={(ids) => mutation.mutate(ids)}
-        disabled={mutation.isPending}
-      />
+      </SectionHeading>
+      {readOnly ? (
+        labels.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sem etiquetas.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {labels.map((label) => (
+              <LabelChip key={label.id} label={label} />
+            ))}
+          </div>
+        )
+      ) : (
+        <LabelPicker
+          projectId={task.project_id}
+          idPrefix={`task-${task.id}`}
+          value={labels.map((l) => l.id)}
+          onChange={(ids) => mutation.mutate(ids)}
+          disabled={mutation.isPending}
+        />
+      )}
       <MutationError error={mutation.error} fallback="Não foi possível actualizar as etiquetas." />
     </section>
   )
 }
 
-/** Botão "Seguir"/"Deixar de seguir" (observadores recebem notificações da tarefa). */
+/** Botão "Seguir"/"Deixar de seguir": quem segue recebe notificações da tarefa. */
 export function WatchButton({
   task,
   onWatchersChanged,
@@ -128,22 +152,32 @@ export function WatchButton({
 }) {
   const { user } = useAuth()
   const watching = !!user && (task.watchers ?? []).some((w) => w.id === user.id)
-  const mutation = useMutation({ mutationFn: () => toggleWatch(task.id), onSuccess: onWatchersChanged })
+  const mutation = useMutation({
+    mutationFn: () => toggleWatch(task.id),
+    onSuccess: onWatchersChanged,
+  })
   const count = task.watchers?.length ?? 0
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <Button
-        size="sm"
-        variant={watching ? 'secondary' : 'outline'}
-        aria-pressed={watching}
-        disabled={mutation.isPending}
-        onClick={() => mutation.mutate()}
-      >
-        {watching ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
-        {watching ? 'Deixar de seguir' : 'Seguir'}
-        <span className="text-xs text-muted-foreground">({count})</span>
-      </Button>
+      <div className="flex items-center gap-1">
+        <Button
+          size="sm"
+          variant={watching ? 'secondary' : 'outline'}
+          aria-pressed={watching}
+          disabled={mutation.isPending}
+          onClick={() => mutation.mutate()}
+        >
+          {watching ? (
+            <EyeOff className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <Eye className="h-4 w-4" aria-hidden="true" />
+          )}
+          {watching ? 'Deixar de seguir' : 'Seguir'}
+          <span className="text-xs text-muted-foreground">({count})</span>
+        </Button>
+        <InfoTooltip {...HELP.watch} />
+      </div>
       <MutationError error={mutation.error} fallback="Não foi possível alterar o seguimento." />
     </div>
   )

@@ -3,7 +3,9 @@ import { cn } from '@/lib/utils'
 
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className="w-full overflow-auto">
+    // `relative`: os elementos `sr-only` (absolutos) ficam contidos no scroll da tabela em vez de
+    // alargarem a página inteira em ecrãs estreitos.
+    <div className="relative w-full overflow-auto">
       <table className={cn('w-full caption-bottom text-sm', className)} {...props} />
     </div>
   )

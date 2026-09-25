@@ -13,6 +13,8 @@ vi.mock('@/context/AuthContext', () => ({
   }),
 }))
 
+import { AxiosError, AxiosHeaders } from 'axios'
+import { readSessionNotice, saveSessionNotice } from '@/lib/sessionNotice'
 import LoginPage from './LoginPage'
 
 function renderLoginPage() {
@@ -48,5 +50,37 @@ describe('LoginPage', () => {
         password: 'segredo123',
       }),
     )
+  })
+
+  it('mostra a mensagem da API quando a sessão terminou por a conta ter sido desactivada', () => {
+    saveSessionNotice('A sua conta está desactivada. Contacte um administrador.')
+    renderLoginPage()
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'A sua conta está desactivada. Contacte um administrador.',
+    )
+    expect(readSessionNotice()).toBeNull()
+  })
+
+  it('mostra o erro 422 da API no login (ex.: conta desactivada)', async () => {
+    const headers = new AxiosHeaders()
+    loginMock.mockRejectedValueOnce(
+      new AxiosError('Unprocessable', 'ERR_BAD_REQUEST', { headers }, null, {
+        status: 422,
+        statusText: 'Unprocessable Content',
+        headers: {},
+        config: { headers },
+        data: {
+          message: 'A sua conta está desactivada. Contacte um administrador.',
+          errors: { email: ['A sua conta está desactivada. Contacte um administrador.'] },
+        },
+      }),
+    )
+    renderLoginPage()
+    await userEvent.type(screen.getByLabelText(/email/i), 'bruno@x.pt')
+    await userEvent.type(screen.getByLabelText(/palavra-passe/i), 'segredo123')
+    await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('A sua conta está desactivada.')
   })
 })

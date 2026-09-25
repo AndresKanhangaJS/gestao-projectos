@@ -75,6 +75,7 @@ class ActivityLogTest extends TestCase
         $other = $this->makeTask(['title' => 'Outra tarefa']);
         $label = Label::factory()->create(['project_id' => $this->project->id, 'name' => 'Backend']);
         $assignee = User::factory()->create(['name' => 'Rita']);
+        $this->workspace->members()->attach($assignee->id, ['role' => WorkspaceRole::Member->value]);
 
         $this->postJson("/api/projects/tasks/{$task->id}/move", ['board_column_id' => $this->doneColumn->id, 'position' => 0])->assertOk();
         $this->postJson("/api/projects/tasks/{$task->id}/comments", ['body' => 'Olá'])->assertCreated();

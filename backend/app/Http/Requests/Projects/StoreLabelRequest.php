@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Projects;
 
+use App\Models\Projects\Project;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreLabelRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var Project $project */
+        $project = $this->route('project');
+
+        return (bool) $this->user()?->can('createLabel', $project);
     }
 
     /**

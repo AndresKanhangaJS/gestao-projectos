@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2 } from 'lucide-react'
 import { deleteSoftwareProduct, getSoftwareProductOverview } from '@/api/infra'
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
+import { LinkedProjectsSection } from '@/components/infra/LinkedProjectsSection'
 import { SoftwareModulesSection } from '@/components/infra/SoftwareModulesSection'
 import { SoftwareProductFormDialog } from '@/components/infra/SoftwareProductFormDialog'
 import { infraRootKey, softwareProductOverviewKey } from '@/components/infra/queryKeys'
@@ -11,7 +12,14 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/Spinner'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table'
 import { useInfraPermissions } from '@/hooks/useHasRole'
 import { isForbidden } from '@/lib/errors'
 import { formatDate } from '@/lib/format'
@@ -26,22 +34,33 @@ export default function SoftwareProductDetailPage() {
   const { canWrite } = useInfraPermissions()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const { hash } = useLocation()
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: softwareProductOverviewKey(id),
     queryFn: () => getSoftwareProductOverview(id),
   })
 
+  // Ligações "…#modulos" (lista de softwares, diálogo do cliente) levam directamente aos módulos.
+  const loaded = data != null
+  useEffect(() => {
+    if (loaded && hash === '#modulos') document.getElementById('modulos')?.scrollIntoView?.()
+  }, [hash, loaded])
+
   if (isLoading) return <LoadingState />
   if (isError || !data) {
     return (
       <ErrorState
-        message={isForbidden(error) ? 'Não tem acesso a este software.' : 'Não foi possível carregar o software.'}
+        message={
+          isForbidden(error)
+            ? 'Não tem acesso a este software.'
+            : 'Não foi possível carregar o software.'
+        }
       />
     )
   }
 
-  const { software_product: product, instances } = data
+  const { software_product: product, instances, projects } = data
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,11 +85,14 @@ export default function SoftwareProductDetailPage() {
 
       {product.description && <p className="whitespace-pre-wrap text-sm">{product.description}</p>}
 
+      <SoftwareModulesSection productId={product.id} canWrite={canWrite} />
+
       <Card>
         <CardHeader>
           <CardTitle>Instalações em clientes</CardTitle>
           <CardDescription>
-            {instances.length} cliente(s) com este software. Para associar um cliente, use a página do cliente.
+            {instances.length} cliente(s) com este software. Para associar um cliente, use a página
+            do cliente.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -90,20 +112,30 @@ export default function SoftwareProductDetailPage() {
                 {instances.map((instance) => (
                   <TableRow key={instance.id}>
                     <TableCell>
-                      <Link to={`/infra/clients/${instance.client_id}`} className="font-medium text-primary hover:underline">
+                      <Link
+                        to={`/infra/clients/${instance.client_id}`}
+                        className="font-medium text-primary hover:underline"
+                      >
                         {instance.client?.name ?? `Cliente #${instance.client_id}`}
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <Badge>{CLIENT_SOFTWARE_STATUS_LABEL[instance.status] ?? instance.status}</Badge>
+                      <Badge>
+                        {CLIENT_SOFTWARE_STATUS_LABEL[instance.status] ?? instance.status}
+                      </Badge>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(instance.activated_at)}</TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(instance.activated_at)}
+                    </TableCell>
                     <TableCell>
                       {instance.deployments?.length ? (
                         <ul className="flex flex-col gap-0.5 text-sm">
                           {instance.deployments.map((d) => (
                             <li key={d.id}>
-                              <Link to={`/infra/machines/${d.machine_id}`} className="text-primary hover:underline">
+                              <Link
+                                to={`/infra/machines/${d.machine_id}`}
+                                className="text-primary hover:underline"
+                              >
                                 {d.machine?.name ?? `Máquina #${d.machine_id}`}
                               </Link>
                               {d.port ? ` : ${d.port}` : ''}{' '}
@@ -114,7 +146,7 @@ export default function SoftwareProductDetailPage() {
                           ))}
                         </ul>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">Sem deployments</span>
                       )}
                     </TableCell>
                   </TableRow>
@@ -125,7 +157,11 @@ export default function SoftwareProductDetailPage() {
         </CardContent>
       </Card>
 
-      <SoftwareModulesSection productId={product.id} canWrite={canWrite} />
+      <LinkedProjectsSection
+        projects={projects}
+        description="Projectos sobre este software, para um cliente ou internos do produto."
+        emptyDescription="Para ligar um projecto a este software, edite o projecto e escolha-o em “Relação com o cliente”."
+      />
 
       {editOpen && <SoftwareProductFormDialog open product={product} onOpenChange={setEditOpen} />}
       <DeleteConfirmDialog

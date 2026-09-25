@@ -77,7 +77,8 @@ class CredentialController extends Controller
     {
         $this->authorize('delete', $credential);
 
-        $credential->delete();
+        // Soft delete + segredo destruído (null); os access logs ficam como auditoria.
+        $credential->revokeAndDelete();
 
         return response()->noContent();
     }
@@ -89,6 +90,9 @@ class CredentialController extends Controller
     public function reveal(Request $request, Credential $credential): JsonResponse
     {
         $this->authorize('reveal', $credential);
+
+        // Nunca devolver `secret: null` (credencial sem segredo guardado).
+        abort_if($credential->secret === null, Response::HTTP_NOT_FOUND, 'Esta credencial não tem segredo guardado.');
 
         CredentialAccessLog::create([
             'credential_id' => $credential->id,

@@ -5,14 +5,23 @@ import { deleteTask, getTask, getTaskActivity } from '@/api/tasks'
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 import { ErrorState, LoadingState } from '@/components/ui/Spinner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { isForbidden } from '@/lib/errors'
 import { PRIORITY_LABEL, PRIORITY_VARIANT, TASK_TYPE_LABEL } from '@/lib/labels'
+import { canEditTasks } from '@/lib/projectPermissions'
 import type { Task, UserSummary } from '@/types/projects'
 import { ActivityList } from '../ActivityList'
-import { projectActivityKey, projectTasksKey, taskActivityKey, taskKey } from '../queryKeys'
+import { invalidateProjectTasks } from '../invalidation'
+import { taskActivityKey, taskKey } from '../queryKeys'
+import { useProjectPermissions } from '../useProjectData'
 import { AttachmentsSection } from './AttachmentsSection'
 import { AssigneesSection, LabelsSection, WatchButton } from './PeopleAndLabels'
 import { RelationsSection } from './RelationsSection'
@@ -42,22 +51,38 @@ export function TaskDetailDialog({
     enabled: taskId != null,
   })
   const task = taskQuery.data
+  const can = useProjectPermissions(task?.project_id ?? 0)
+  const readOnly = !canEditTasks(can)
 
+  /** Uma alteração na tarefa reflecte-se no Kanban, Lista, Backlog (contagens dos sprints) e actividade. */
   function invalidateRelated(projectId: number, id: number) {
-    queryClient.invalidateQueries({ queryKey: taskKey(id) })
-    queryClient.invalidateQueries({ queryKey: projectTasksKey(projectId) })
-    queryClient.invalidateQueries({ queryKey: taskActivityKey(id) })
-    queryClient.invalidateQueries({ queryKey: projectActivityKey(projectId) })
+    invalidateProjectTasks(queryClient, projectId, id)
   }
 
-  /** As respostas de escrita não incluem comentários/subtarefas/observadores — preserva-os. */
+  /** As respostas de escrita não incluem comentários, subtarefas nem observadores: preserva-os. */
   function handleUpdated(updated: Task) {
     queryClient.setQueryData<Task>(taskKey(updated.id), (old) =>
       old
-        ? { ...old, ...updated, comments: old.comments, subtasks: old.subtasks, watchers: updated.watchers ?? old.watchers }
+        ? {
+            ...old,
+            ...updated,
+            comments: old.comments,
+            subtasks: old.subtasks,
+            watchers: updated.watchers ?? old.watchers,
+          }
         : updated,
     )
     invalidateRelated(updated.project_id, updated.id)
+    // A tarefa-mãe mostra o resumo (coluna/concluída) das subtarefas.
+    if (updated.parent_id != null)
+      queryClient.invalidateQueries({ queryKey: taskKey(updated.parent_id) })
+  }
+
+  /** `PUT tasks/{t}/assignees` devolve só a lista de responsáveis. */
+  function handleAssignees(assignees: UserSummary[]) {
+    if (!task) return
+    queryClient.setQueryData<Task>(taskKey(task.id), (old) => (old ? { ...old, assignees } : old))
+    invalidateRelated(task.project_id, task.id)
   }
 
   function handleWatchers(watchers: UserSummary[]) {
@@ -69,7 +94,7 @@ export function TaskDetailDialog({
 
   return (
     <Dialog open={taskId != null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+      <DialogContent className="max-w-3xl">
         {taskQuery.isLoading ? (
           <>
             <DialogTitle className="sr-only">A carregar tarefa</DialogTitle>
@@ -92,7 +117,9 @@ export function TaskDetailDialog({
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">{TASK_TYPE_LABEL[task.type]}</Badge>
-                  <Badge variant={PRIORITY_VARIANT[task.priority]}>{PRIORITY_LABEL[task.priority]}</Badge>
+                  <Badge variant={PRIORITY_VARIANT[task.priority]}>
+                    {PRIORITY_LABEL[task.priority]}
+                  </Badge>
                   {task.column && <Badge variant="secondary">{task.column.name}</Badge>}
                   {task.parent_id != null && (
                     <button
@@ -106,22 +133,26 @@ export function TaskDetailDialog({
                 </div>
                 <div className="flex items-start gap-2">
                   <WatchButton task={task} onWatchersChanged={handleWatchers} />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => setConfirmDelete(task)}
-                    aria-label="Apagar tarefa"
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </Button>
+                  {can.delete_task && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => setConfirmDelete(task)}
+                      aria-label="Apagar tarefa"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  )}
                 </div>
               </div>
               <DialogTitle>
                 #{task.id} · {task.title}
               </DialogTitle>
               <DialogDescription>
-                Criada por {task.reporter?.name ?? '—'}
+                Criada por {task.reporter?.name ?? 'utilizador desconhecido'}
+                {readOnly &&
+                  ' · Só de leitura: o seu papel neste workspace permite ver e comentar, mas não alterar tarefas.'}
               </DialogDescription>
             </DialogHeader>
 
@@ -132,17 +163,36 @@ export function TaskDetailDialog({
               </TabsList>
 
               <TabsContent value="details" className="flex flex-col gap-6 pt-2">
-                <TaskFieldsForm key={task.id} task={task} onSaved={handleUpdated} />
-                <AssigneesSection task={task} onUpdated={handleUpdated} />
-                <LabelsSection task={task} onUpdated={handleUpdated} />
+                <TaskFieldsForm
+                  key={task.id}
+                  task={task}
+                  onSaved={handleUpdated}
+                  readOnly={readOnly}
+                />
+                <AssigneesSection
+                  task={task}
+                  onAssigneesChanged={handleAssignees}
+                  readOnly={readOnly}
+                />
+                <LabelsSection task={task} onUpdated={handleUpdated} readOnly={readOnly} />
                 <SubtasksSection
                   taskId={task.id}
                   subtasks={task.subtasks ?? []}
                   onOpenTask={openTask}
                   onChanged={() => invalidateRelated(task.project_id, task.id)}
+                  readOnly={readOnly}
                 />
-                <RelationsSection taskId={task.id} projectId={task.project_id} onOpenTask={openTask} />
-                <AttachmentsSection taskId={task.id} onChanged={() => invalidateRelated(task.project_id, task.id)} />
+                <RelationsSection
+                  taskId={task.id}
+                  projectId={task.project_id}
+                  onOpenTask={openTask}
+                  readOnly={readOnly}
+                />
+                <AttachmentsSection
+                  taskId={task.id}
+                  onChanged={() => invalidateRelated(task.project_id, task.id)}
+                  readOnly={readOnly}
+                />
                 <CommentsSection
                   taskId={task.id}
                   comments={task.comments ?? []}
@@ -151,7 +201,10 @@ export function TaskDetailDialog({
               </TabsContent>
 
               <TabsContent value="activity" className="pt-2">
-                <ActivityList queryKey={taskActivityKey(task.id)} fetchPage={(page) => getTaskActivity(task.id, page)} />
+                <ActivityList
+                  queryKey={taskActivityKey(task.id)}
+                  fetchPage={(page) => getTaskActivity(task.id, page)}
+                />
               </TabsContent>
             </Tabs>
 
@@ -159,12 +212,16 @@ export function TaskDetailDialog({
               item={confirmDelete}
               onClose={() => setConfirmDelete(null)}
               title="Apagar tarefa?"
-              description={confirmDelete ? `A tarefa “${confirmDelete.title}” será removida.` : undefined}
+              description={
+                confirmDelete ? `A tarefa “${confirmDelete.title}” será removida.` : undefined
+              }
               remove={(t) => deleteTask(t.id)}
               onDeleted={(t) => {
                 queryClient.removeQueries({ queryKey: taskKey(t.id) })
-                queryClient.invalidateQueries({ queryKey: projectTasksKey(t.project_id) })
-                queryClient.invalidateQueries({ queryKey: projectActivityKey(t.project_id) })
+                invalidateProjectTasks(queryClient, t.project_id)
+                // A tarefa-mãe mostra a lista de subtarefas.
+                if (t.parent_id != null)
+                  queryClient.invalidateQueries({ queryKey: taskKey(t.parent_id) })
                 onClose()
               }}
               errorFallback="Não foi possível apagar a tarefa."

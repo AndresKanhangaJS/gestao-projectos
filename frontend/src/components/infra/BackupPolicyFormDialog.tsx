@@ -4,10 +4,23 @@ import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createBackupPolicy, toTargetType, updateBackupPolicy } from '@/api/infra'
 import { Button } from '@/components/ui/Button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
+import { Combobox } from '@/components/ui/Combobox'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { mutationErrorMessage } from '@/lib/errors'
 import { BACKUP_FREQUENCY_LABEL } from '@/lib/labels'
 import type { BackupFrequency, BackupPolicy, PolymorphicTargetType } from '@/types/infra'
@@ -137,10 +150,12 @@ export function BackupPolicyFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Editar política de backup' : 'Nova política de backup'}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? 'Editar política de backup' : 'Nova política de backup'}
+          </DialogTitle>
           <DialogDescription>
             {isEdit
-              ? 'O recurso protegido não pode ser alterado — crie uma nova política se necessário.'
+              ? 'O recurso protegido não pode ser alterado. Se precisar de outro, crie uma nova política.'
               : 'Associe a política a uma máquina ou a um deployment.'}
           </DialogDescription>
         </DialogHeader>
@@ -182,23 +197,22 @@ export function BackupPolicyFormDialog({
                 control={control}
                 name="backupable_id"
                 render={({ field }) => (
-                  <Select value={field.value} disabled={isEdit} onValueChange={field.onChange}>
-                    <SelectTrigger
-                      id="bp-target"
-                      onBlur={field.onBlur}
-                      aria-invalid={!!errors.backupable_id}
-                      aria-describedby={errors.backupable_id ? 'bp-target-error' : undefined}
-                    >
-                      <SelectValue placeholder="Seleccione…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {typeTargets.map((target) => (
-                        <SelectItem key={`${target.type}:${target.id}`} value={String(target.id)}>
-                          {target.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    id="bp-target"
+                    value={field.value}
+                    disabled={isEdit}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    placeholder={
+                      selectedType === 'machine' ? 'Pesquise a máquina…' : 'Pesquise o deployment…'
+                    }
+                    invalid={!!errors.backupable_id}
+                    aria-describedby={errors.backupable_id ? 'bp-target-error' : undefined}
+                    options={typeTargets.map((target) => ({
+                      value: String(target.id),
+                      label: target.label,
+                    }))}
+                  />
                 )}
               />
               <FieldError id="bp-target-error" message={errors.backupable_id?.message} />
@@ -256,7 +270,10 @@ export function BackupPolicyFormDialog({
 
           {mutation.isError && (
             <p className="text-sm text-destructive" role="alert">
-              {mutationErrorMessage(mutation.error, 'Não foi possível guardar a política de backup.')}
+              {mutationErrorMessage(
+                mutation.error,
+                'Não foi possível guardar a política de backup.',
+              )}
             </p>
           )}
 

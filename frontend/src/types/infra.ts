@@ -84,7 +84,7 @@ export interface Deployment {
   software_module?: SoftwareModule | null
 }
 
-/** Nunca contém o segredo — esse só é obtido via `POST /infra/credentials/{id}/reveal`. */
+/** Nunca contém o segredo: esse só é obtido via `POST /infra/credentials/{id}/reveal`. */
 export interface Credential {
   id: number
   /** Nome completo da classe no backend (ex.: `App\Models\Infra\Machine`). */
@@ -146,7 +146,10 @@ export interface ClientSoftwarePayload {
   notes: string | null
 }
 
-export type UpdateClientSoftwarePayload = Omit<ClientSoftwarePayload, 'client_id' | 'software_product_id'>
+export type UpdateClientSoftwarePayload = Omit<
+  ClientSoftwarePayload,
+  'client_id' | 'software_product_id'
+>
 
 export interface DeploymentPayload {
   client_software_id: number
@@ -175,7 +178,10 @@ export interface CreateCredentialPayload {
 }
 
 /** Na edição o segredo só é enviado quando o utilizador escreve um novo (vazio = manter o actual). */
-export type UpdateCredentialPayload = Omit<CreateCredentialPayload, 'credentialable_type' | 'credentialable_id'>
+export type UpdateCredentialPayload = Omit<
+  CreateCredentialPayload,
+  'credentialable_type' | 'credentialable_id'
+>
 
 export interface BackupPolicy {
   id: number

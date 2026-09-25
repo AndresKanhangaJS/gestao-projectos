@@ -13,6 +13,7 @@ export function ConfirmDialog({
   onConfirm,
   isPending = false,
   error,
+  confirmVariant = 'destructive',
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -23,6 +24,8 @@ export function ConfirmDialog({
   onConfirm: () => void
   isPending?: boolean
   error?: string | null
+  /** `default` para confirmações não destrutivas (ex.: reactivar uma conta). */
+  confirmVariant?: 'destructive' | 'default'
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -36,11 +39,11 @@ export function ConfirmDialog({
             {error}
           </p>
         )}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+          <Button variant={confirmVariant} onClick={onConfirm} disabled={isPending}>
             {isPending ? pendingLabel : confirmLabel}
           </Button>
         </div>

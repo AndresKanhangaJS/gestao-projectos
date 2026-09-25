@@ -4,9 +4,16 @@ import { z } from 'zod'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createCredential, toTargetType, updateCredential } from '@/api/infra'
 import { Button } from '@/components/ui/Button'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 import { FormField, FormServerError } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
+import { ComboboxField } from '@/components/ui/ComboboxField'
 import { SelectField } from '@/components/ui/SelectField'
 import { Textarea } from '@/components/ui/Textarea'
 import { applyServerErrors, emptyToNull, fieldA11y } from '@/lib/forms'
@@ -56,7 +63,10 @@ export function CredentialFormDialog({
     resolver: zodResolver(schema),
     defaultValues: {
       target: credential
-        ? targetValue({ type: toTargetType(credential.credentialable_type) ?? '', id: credential.credentialable_id })
+        ? targetValue({
+            type: toTargetType(credential.credentialable_type) ?? '',
+            id: credential.credentialable_id,
+          })
         : targets.length === 1
           ? targetValue(targets[0])
           : '',
@@ -101,16 +111,23 @@ export function CredentialFormDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Editar credencial' : 'Nova credencial'}</DialogTitle>
-          <DialogDescription>O segredo é guardado encriptado e nunca é mostrado nesta lista.</DialogDescription>
+          <DialogDescription>
+            O segredo é guardado encriptado e nunca é mostrado nesta lista.
+          </DialogDescription>
         </DialogHeader>
-        <form className="flex flex-col gap-4" noValidate onSubmit={handleSubmit((v) => mutation.mutate(v))}>
+        <form
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={handleSubmit((v) => mutation.mutate(v))}
+        >
           <FormField id="cred-target" label="Associada a" error={errors.target}>
-            <SelectField
+            <ComboboxField
               control={control}
               name="target"
               id="cred-target"
               disabled={isEdit}
               invalid={!!errors.target}
+              placeholder="Pesquise máquina ou deployment…"
               options={targets.map((t) => ({ value: targetValue(t), label: t.label }))}
             />
           </FormField>
@@ -121,11 +138,18 @@ export function CredentialFormDialog({
                 name="type"
                 id="cred-type"
                 invalid={!!errors.type}
-                options={optionKeys(CREDENTIAL_TYPE_LABEL).map((k) => ({ value: k, label: CREDENTIAL_TYPE_LABEL[k] }))}
+                options={optionKeys(CREDENTIAL_TYPE_LABEL).map((k) => ({
+                  value: k,
+                  label: CREDENTIAL_TYPE_LABEL[k],
+                }))}
               />
             </FormField>
             <FormField id="cred-username" label="Utilizador" error={errors.username}>
-              <Input autoComplete="off" {...fieldA11y('cred-username', errors.username)} {...register('username')} />
+              <Input
+                autoComplete="off"
+                {...fieldA11y('cred-username', errors.username)}
+                {...register('username')}
+              />
             </FormField>
           </div>
           <FormField

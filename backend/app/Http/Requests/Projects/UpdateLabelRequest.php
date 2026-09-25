@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Projects;
 
+use App\Models\Projects\Label;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateLabelRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var Label $label */
+        $label = $this->route('label');
+
+        return (bool) $this->user()?->can('manageLabels', $label->project);
     }
 
     /**

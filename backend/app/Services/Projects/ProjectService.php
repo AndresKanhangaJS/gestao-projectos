@@ -42,15 +42,72 @@ class ProjectService
         // Os enums são resolvidos pelo cast do model; um valor por omissão só ao
         // nível da coluna (migração) não fica disponível na instância recém-criada.
         $data['status'] ??= ProjectStatus::Active->value;
+        $moduleIds = $this->pullModuleIds($data);
 
-        return DB::transaction(function () use ($workspace, $data): Project {
+        return DB::transaction(function () use ($workspace, $data, $moduleIds): Project {
             /** @var Project $project */
             $project = $workspace->projects()->create($data);
+
+            if ($moduleIds !== null) {
+                $project->modules()->sync($moduleIds);
+            }
 
             $this->createDefaultBoard($project);
 
             return $project;
         });
+    }
+
+    /**
+     * Actualiza o projecto e a ligação ao Controlo de Software.
+     * Mudar ou limpar o software sem enviar `client_id`/`module_ids` limpa-os
+     * (deixariam de ser coerentes) — espelha ValidatesProjectLinks.
+     *
+     * @param  array<string, mixed>  $data  dados validados de UpdateProjectRequest
+     */
+    public function update(Project $project, array $data): Project
+    {
+        $moduleIds = $this->pullModuleIds($data);
+
+        if (array_key_exists('software_product_id', $data)) {
+            $productId = $data['software_product_id'] === null ? null : (int) $data['software_product_id'];
+            $current = $project->software_product_id === null ? null : (int) $project->software_product_id;
+
+            if ($productId !== $current || $productId === null) {
+                if (! array_key_exists('client_id', $data)) {
+                    $data['client_id'] = null;
+                }
+                $moduleIds ??= [];
+            }
+        }
+
+        DB::transaction(function () use ($project, $data, $moduleIds): void {
+            $project->update($data);
+
+            if ($moduleIds !== null) {
+                $project->modules()->sync($moduleIds);
+            }
+        });
+
+        return $project;
+    }
+
+    /**
+     * Remove `module_ids` do payload: null = não enviado (não mexer); [] = limpar.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<int, int>|null
+     */
+    private function pullModuleIds(array &$data): ?array
+    {
+        if (! array_key_exists('module_ids', $data)) {
+            return null;
+        }
+
+        $ids = array_values(array_map('intval', (array) ($data['module_ids'] ?? [])));
+        unset($data['module_ids']);
+
+        return $ids;
     }
 
     public function createDefaultBoard(Project $project): Board

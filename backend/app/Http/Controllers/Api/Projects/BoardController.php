@@ -29,8 +29,6 @@ class BoardController extends Controller
     /** Cria um quadro; por omissão com as colunas base (`with_default_columns`, default true). */
     public function store(StoreBoardRequest $request, Project $project, ProjectService $projects): JsonResponse
     {
-        $this->authorize('update', $project);
-
         $board = $projects->createBoard(
             $project,
             $request->safe()->except('with_default_columns'),
@@ -49,8 +47,6 @@ class BoardController extends Controller
 
     public function update(UpdateBoardRequest $request, Board $board): JsonResponse
     {
-        $this->authorize('update', $board->project);
-
         $data = $request->validated();
 
         if (! empty($data['is_default'])) {
@@ -64,7 +60,7 @@ class BoardController extends Controller
 
     public function destroy(Board $board, ProjectDeletionService $deletion): Response
     {
-        $this->authorize('delete', $board->project);
+        $this->authorize('manageBoard', $board->project);
 
         // Remove primeiro as tarefas (FK restrict em board_column_id) — ver ProjectDeletionService.
         $deletion->deleteBoard($board);

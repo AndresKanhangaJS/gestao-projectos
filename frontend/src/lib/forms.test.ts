@@ -15,7 +15,7 @@ function httpError(status: number, data: unknown): AxiosError {
 
 type Values = { name: string; contact_email: string; modules: string }
 
-describe('applyServerErrors — mapeamento de erros 422 do Laravel', () => {
+describe('applyServerErrors: mapeamento de erros 422 do Laravel', () => {
   it('associa cada mensagem ao campo correspondente', () => {
     const setError = vi.fn()
     const error = httpError(422, {
@@ -27,14 +27,20 @@ describe('applyServerErrors — mapeamento de erros 422 do Laravel', () => {
 
     expect(mapped).toBe(true)
     expect(setError).toHaveBeenCalledWith('name', { type: 'server', message: 'O nome já existe.' })
-    expect(setError).toHaveBeenCalledWith('contact_email', { type: 'server', message: 'Email inválido.' })
+    expect(setError).toHaveBeenCalledWith('contact_email', {
+      type: 'server',
+      message: 'Email inválido.',
+    })
     expect(setError).not.toHaveBeenCalledWith('root.server', expect.anything())
   })
 
   it('associa chaves aninhadas ao campo raiz e usa aliases', () => {
     const setError = vi.fn()
     const error = httpError(422, {
-      errors: { 'modules.0.active': ['Estado inválido.'], credentialable_id: ['Recurso inválido.'] },
+      errors: {
+        'modules.0.active': ['Estado inválido.'],
+        credentialable_id: ['Recurso inválido.'],
+      },
     })
 
     applyServerErrors<Values>(error, setError, {
@@ -42,7 +48,10 @@ describe('applyServerErrors — mapeamento de erros 422 do Laravel', () => {
       aliases: { credentialable_id: 'name' },
     })
 
-    expect(setError).toHaveBeenCalledWith('modules', { type: 'server', message: 'Estado inválido.' })
+    expect(setError).toHaveBeenCalledWith('modules', {
+      type: 'server',
+      message: 'Estado inválido.',
+    })
     expect(setError).toHaveBeenCalledWith('name', { type: 'server', message: 'Recurso inválido.' })
   })
 
@@ -53,14 +62,21 @@ describe('applyServerErrors — mapeamento de erros 422 do Laravel', () => {
     const mapped = applyServerErrors<Values>(error, setError, { fields: ['name'] })
 
     expect(mapped).toBe(false)
-    expect(setError).toHaveBeenCalledWith('root.server', { type: 'server', message: 'Workspace arquivado.' })
+    expect(setError).toHaveBeenCalledWith('root.server', {
+      type: 'server',
+      message: 'Workspace arquivado.',
+    })
   })
 
   it('traduz 403 para uma mensagem em português em root.server', () => {
     const setError = vi.fn()
-    applyServerErrors<Values>(httpError(403, { message: 'This action is unauthorized.' }), setError, {
-      fields: ['name'],
-    })
+    applyServerErrors<Values>(
+      httpError(403, { message: 'This action is unauthorized.' }),
+      setError,
+      {
+        fields: ['name'],
+      },
+    )
     expect(setError).toHaveBeenCalledWith('root.server', {
       type: 'server',
       message: 'Não tem permissão para executar esta acção.',

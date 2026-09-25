@@ -1,7 +1,12 @@
 import { useEffect, useEffectEvent, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, Eye, History, KeyRound, Pencil, Plus, ShieldAlert, Trash2 } from 'lucide-react'
-import { deleteCredential, listMachineCredentials, revealCredential, toTargetType } from '@/api/infra'
+import {
+  deleteCredential,
+  listMachineCredentials,
+  revealCredential,
+  toTargetType,
+} from '@/api/infra'
 import { DeleteConfirmDialog } from '@/components/common/DeleteConfirmDialog'
 import { CredentialAccessLogsDialog } from './CredentialAccessLogsDialog'
 import { CredentialFormDialog } from './CredentialFormDialog'
@@ -9,12 +14,26 @@ import { credentialsKey } from './queryKeys'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/Dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/Spinner'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table'
 import { isForbidden, isTooManyRequests } from '@/lib/errors'
 import { CREDENTIAL_TYPE_LABEL } from '@/lib/labels'
 import type { Credential, PolymorphicTargetType } from '@/types/infra'
+import { EMPTY_VALUE } from '@/lib/format'
 
 /** Tempo (segundos) durante o qual o segredo revelado fica visível. */
 export const REVEAL_TIMEOUT_SECONDS = 30
@@ -61,12 +80,16 @@ export function CredentialsSection({
     retry: (count, error) => !isForbidden(error) && count < 2,
   })
 
-  const labelsByKey = useMemo(() => new Map(targets.map((t) => [`${t.type}:${t.id}`, t.label])), [targets])
+  const labelsByKey = useMemo(
+    () => new Map(targets.map((t) => [`${t.type}:${t.id}`, t.label])),
+    [targets],
+  )
   const credentials = useMemo(
     () => (credentialsQuery.data ?? []).filter((c) => labelsByKey.has(targetKeyOf(c))),
     [credentialsQuery.data, labelsByKey],
   )
-  const labelFor = (credential: Credential) => labelsByKey.get(targetKeyOf(credential)) ?? '—'
+  const labelFor = (credential: Credential) =>
+    labelsByKey.get(targetKeyOf(credential)) ?? 'Recurso desconhecido'
 
   let content: React.ReactNode
   if (credentialsQuery.isLoading) {
@@ -95,11 +118,19 @@ export function CredentialsSection({
           {credentials.map((credential) => (
             <TableRow key={credential.id}>
               <TableCell>
-                <Badge variant="outline">{CREDENTIAL_TYPE_LABEL[credential.type] ?? credential.type}</Badge>
+                <Badge variant="outline">
+                  {CREDENTIAL_TYPE_LABEL[credential.type] ?? credential.type}
+                </Badge>
               </TableCell>
               <TableCell>{labelFor(credential)}</TableCell>
-              <TableCell className="font-mono text-xs">{credential.username ?? '—'}</TableCell>
-              <TableCell className="text-muted-foreground">{credential.notes ?? '—'}</TableCell>
+              <TableCell className="font-mono text-xs">
+                {credential.username ?? (
+                  <span className="font-sans text-muted-foreground">{EMPTY_VALUE}</span>
+                )}
+              </TableCell>
+              <TableCell className="text-muted-foreground">
+                {credential.notes ?? 'Sem notas'}
+              </TableCell>
               <TableCell className="text-right">
                 <Button
                   size="sm"
@@ -165,12 +196,17 @@ export function CredentialsSection({
           )}
         </div>
         <CardDescription>
-          Os segredos nunca são listados. Revelar um segredo fica registado no histórico de auditoria.
+          Os segredos nunca são listados. Revelar um segredo fica registado no histórico de
+          auditoria.
         </CardDescription>
       </CardHeader>
       <CardContent>{content}</CardContent>
       {/* `key` força um estado limpo (sem segredo) sempre que se escolhe outra credencial. */}
-      <RevealCredentialDialog key={`reveal-${selected?.id ?? 'none'}`} credential={selected} onClose={() => setSelected(null)} />
+      <RevealCredentialDialog
+        key={`reveal-${selected?.id ?? 'none'}`}
+        credential={selected}
+        onClose={() => setSelected(null)}
+      />
       {editing && (
         <CredentialFormDialog
           key={editing.credential?.id ?? 'new'}
@@ -179,7 +215,9 @@ export function CredentialsSection({
           onClose={() => setEditing(null)}
         />
       )}
-      {logsFor && <CredentialAccessLogsDialog credential={logsFor} onClose={() => setLogsFor(null)} />}
+      {logsFor && (
+        <CredentialAccessLogsDialog credential={logsFor} onClose={() => setLogsFor(null)} />
+      )}
       <DeleteConfirmDialog
         key={`delete-${toDelete?.id ?? 'none'}`}
         item={toDelete}

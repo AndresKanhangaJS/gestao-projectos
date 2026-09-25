@@ -21,8 +21,6 @@ class TaskAssigneeController extends Controller
         TaskNotifier $notifier,
         ActivityLogger $activity,
     ): JsonResponse {
-        $this->authorize('update', $task);
-
         $changes = $task->assignees()->sync($request->validated('user_ids'));
 
         $activity->assigneesChanged($task, $changes['attached'], $changes['detached'], $request->user());

@@ -4,13 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Projects;
 
+use App\Models\Projects\BoardColumn;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateBoardColumnRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        /** @var BoardColumn $column */
+        $column = $this->route('column');
+
+        return (bool) $this->user()?->can('manageBoard', $column->board->project);
     }
 
     /**
