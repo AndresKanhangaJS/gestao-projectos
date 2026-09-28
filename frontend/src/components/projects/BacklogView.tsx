@@ -34,6 +34,7 @@ import { SprintFormDialog } from './SprintFormDialog'
 import { TaskFormDialog } from './TaskFormDialog'
 import { invalidateProjectTasks, invalidateSprints } from './invalidation'
 import { projectSprintsKey, projectTasksKey } from './queryKeys'
+import { useProjectLiveRefresh } from './liveRefresh'
 
 /** Valor do Select que representa "sem sprint" (Radix Select não aceita string vazia). */
 const BACKLOG_VALUE = 'backlog'
@@ -93,7 +94,12 @@ export function BacklogView({
   const sprintsKey = projectSprintsKey(projectId)
   const canEdit = canEditTasks(can)
 
-  const sprintsQuery = useQuery({ queryKey: sprintsKey, queryFn: () => listSprints(projectId) })
+  const liveRefresh = useProjectLiveRefresh()
+  const sprintsQuery = useQuery({
+    queryKey: sprintsKey,
+    queryFn: () => listSprints(projectId),
+    ...liveRefresh,
+  })
   const sprints = useMemo(() => sortSprints(sprintsQuery.data ?? []), [sprintsQuery.data])
   const columnsById = useMemo(() => new Map(columns.map((c) => [c.id, c])), [columns])
 

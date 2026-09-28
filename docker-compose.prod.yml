@@ -1,0 +1,186 @@
+# Stack de PRODUCAO (servidor interno Level-Soft). Independente do docker-compose.yml de desenvolvimento.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Configuracao da aplicacao: .env.production na raiz do repositorio (copiar de .env.production.example).
+# Variaveis opcionais lidas do shell (ou de um ficheiro .env na raiz): APP_VERSION, HTTP_PORT, HTTPS_PORT, BACKUP_PATH.
+# Guia completo: docs/DEPLOY.md
+#
+# O nome do projecto e fixo ("gestao-prod") para nunca colidir com o projecto de desenvolvimento
+# ("gestao-projectos") na mesma maquina: um `down -v` aqui nunca apaga os volumes de dev.
+name: gestao-prod
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-app-build: &app-build
+  context: .
+  dockerfile: docker/php/Dockerfile
+  target: production
+
+x-app-base: &app-base
+  image: gestao-projectos/app:${APP_VERSION:-latest}
+  build: *app-build
+  env_file:
+    - .env.production
+  restart: unless-stopped
+  volumes:
+    - app_storage:/var/www/html/storage
+  logging: *default-logging
+
+services:
+  web:
+    image: gestao-projectos/web:${APP_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      target: production
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+      # Atras de um reverse proxy que ja termina TLS: descomentar a linha seguinte,
+      # remover o mapeamento da porta 443 e o volume dos certificados (ver docs/DEPLOY.md).
+      # - ./docker/nginx/prod-behind-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - edge
+    logging: *default-logging
+
+  app:
+    <<: *app-base
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "SCRIPT_NAME=/ping SCRIPT_FILENAME=/ping REQUEST_METHOD=GET cgi-fcgi -bind -connect 127.0.0.1:9000 | grep -q pong"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+    networks:
+      - edge
+      - data
+
+  queue:
+    <<: *app-base
+    command: ["php", "artisan", "queue:work", "--tries=3", "--sleep=3", "--max-time=3600"]
+    environment:
+      RUN_MIGRATIONS: "false"
+    stop_grace_period: 60s
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - edge
+      - data
+
+  scheduler:
+    <<: *app-base
+    command: ["php", "artisan", "schedule:work"]
+    environment:
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - edge
+      - data
+
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    # As variaveis MYSQL_* sao derivadas das DB_* do .env.production (uma unica fonte de verdade).
+    entrypoint:
+      - sh
+      - -c
+      - |
+        : "$${DB_DATABASE:?DB_DATABASE em falta}" "$${DB_USERNAME:?DB_USERNAME em falta}"
+        : "$${DB_PASSWORD:?DB_PASSWORD em falta}" "$${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD em falta}"
+        export MYSQL_DATABASE="$$DB_DATABASE" MYSQL_USER="$$DB_USERNAME" MYSQL_PASSWORD="$$DB_PASSWORD" MYSQL_ROOT_PASSWORD="$$DB_ROOT_PASSWORD"
+        exec docker-entrypoint.sh mysqld
+    volumes:
+      - mysql_data:/var/lib/mysql
+    # Sem "ports": a BD so e acessivel dentro da rede interna do Docker.
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$DB_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - data
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    command:
+      - sh
+      - -c
+      - |
+        : "$${REDIS_PASSWORD:?REDIS_PASSWORD em falta}"
+        exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes
+    volumes:
+      - redis_data:/data
+    # Sem "ports": acessivel apenas na rede interna.
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - data
+    logging: *default-logging
+
+  backup:
+    image: gestao-projectos/backup:${APP_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: docker/backup/Dockerfile
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env.production
+    volumes:
+      - app_storage:/app-storage
+      - ${BACKUP_PATH:-./backups}:/backups
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - data
+    logging: *default-logging
+
+networks:
+  # Trafego de entrada (nginx -> php-fpm) e saida (SMTP, etc.).
+  edge:
+    driver: bridge
+  # Rede interna sem acesso ao exterior: MySQL e Redis so sao alcancaveis por aqui.
+  data:
+    driver: bridge
+    internal: true
+
+volumes:
+  mysql_data:
+  redis_data:
+  app_storage:

@@ -20,10 +20,12 @@ class UserAccountService
 {
     /**
      * @param  array{name: string, email: string, password: string, roles: array<int, string>}  $data
+     * @param  bool  $mustChangePassword  por omissão true (password escolhida pelo admin); o comando
+     *                                    `app:create-admin` usa false quando é o próprio operador a defini-la
      */
-    public function create(array $data): User
+    public function create(array $data, bool $mustChangePassword = true): User
     {
-        return DB::transaction(function () use ($data): User {
+        return DB::transaction(function () use ($data, $mustChangePassword): User {
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -31,7 +33,7 @@ class UserAccountService
             ]);
 
             // Password escolhida pelo admin: o utilizador tem de a mudar no 1.º login.
-            $user->forceFill(['must_change_password' => true])->save();
+            $user->forceFill(['must_change_password' => $mustChangePassword])->save();
             $this->syncRoles($user, $data['roles']);
 
             return $user->refresh();

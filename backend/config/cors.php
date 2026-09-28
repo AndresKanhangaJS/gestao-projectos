@@ -23,8 +23,11 @@ return [
     // combinar '*' com supports_credentials=true, por isso listamos
     // explicitamente os dois pontos de entrada de desenvolvimento (nginx na
     // porta 80 e o Vite dev server directo na 5173); em produção ajustar para
-    // o(s) domínio(s) reais.
-    'allowed_origins' => ['http://localhost', 'http://localhost:5173'],
+    // o(s) domínio(s) reais via CORS_ALLOWED_ORIGINS (lista separada por vírgulas).
+    'allowed_origins' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('CORS_ALLOWED_ORIGINS', 'http://localhost,http://localhost:5173')),
+    ))),
 
     'allowed_origins_patterns' => [],
 

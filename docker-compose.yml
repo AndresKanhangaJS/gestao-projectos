@@ -18,6 +18,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+      target: dev
     volumes:
       - ./backend:/var/www/html
       - backend_vendor:/var/www/html/vendor
@@ -52,6 +53,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+      target: dev
     command: php artisan queue:work --tries=3 --sleep=3
     volumes:
       - ./backend:/var/www/html
@@ -85,6 +87,7 @@ services:
     build:
       context: .
       dockerfile: docker/php/Dockerfile
+      target: dev
     command: php artisan schedule:work
     volumes:
       - ./backend:/var/www/html

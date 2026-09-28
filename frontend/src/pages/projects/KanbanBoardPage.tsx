@@ -25,6 +25,7 @@ import {
   projectTasksFilterKey,
   projectTasksKey,
 } from '@/components/projects/queryKeys'
+import { useProjectLiveRefresh } from '@/components/projects/liveRefresh'
 import { Button } from '@/components/ui/Button'
 import { InfoTooltip } from '@/components/ui/InfoTooltip'
 import { Label } from '@/components/ui/Label'
@@ -88,19 +89,24 @@ export default function KanbanBoardPage() {
   const [columnsDialogOpen, setColumnsDialogOpen] = useState(false)
   const [taskDialogOpen, setTaskDialogOpen] = useState(false)
 
+  // Mantém quadro, colunas, sprint activo e tarefas em dia com alterações feitas por outros utilizadores.
+  const liveRefresh = useProjectLiveRefresh()
   const projectQuery = useQuery({
     queryKey: projectKey(id),
     queryFn: () => getProject(id),
+    ...liveRefresh,
     enabled: !!id,
   })
   const boardsQuery = useQuery({
     queryKey: projectBoardsKey(id),
     queryFn: () => listProjectBoards(id),
+    ...liveRefresh,
     enabled: !!id,
   })
   const tasksQuery = useQuery({
     queryKey: projectTasksKey(id),
     queryFn: () => listTasks(id),
+    ...liveRefresh,
     enabled: !!id,
   })
 
@@ -110,6 +116,7 @@ export default function KanbanBoardPage() {
   const kanbanQuery = useQuery({
     queryKey: projectTasksFilterKey(id, sprintFilter),
     queryFn: () => listTasks(id, { sprint: sprintFilter }),
+    ...liveRefresh,
     enabled: !!id && projectQuery.isSuccess && sprintFilter !== 'all',
   })
 

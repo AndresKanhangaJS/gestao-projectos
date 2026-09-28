@@ -33,5 +33,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',
+    // Testes de interacção (userEvent + Radix) demoram ~1-2 s isolados; com muitos workers em
+    // paralelo (ex. 20 CPUs numa VM Docker) excediam os 5 s por omissão de forma intermitente.
+    testTimeout: 15000,
   },
 })
