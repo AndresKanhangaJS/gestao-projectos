@@ -16,5 +16,18 @@ jobs:
           cp backend/.env.example backend/.env
           cp frontend/.env.example frontend/.env
 
-      - name: Construir imagens (docker compose build)
+      - name: Construir imagens de desenvolvimento (docker compose build)
         run: docker compose build
+
+      # Só valida o build: o .env.production é gerado a partir do example (sem segredos reais)
+      # porque o Compose exige que o env_file exista.
+      - name: Preparar .env.production mínimo
+        run: |
+          cp .env.production.example .env.production
+          sed -i 's/^APP_KEY=.*/APP_KEY=base64:ci-apenas-para-build/' .env.production
+
+      - name: Validar docker-compose.prod.yml
+        run: docker compose -f docker-compose.prod.yml config --quiet
+
+      - name: Construir imagens de produção (docker compose -f docker-compose.prod.yml build)
+        run: docker compose -f docker-compose.prod.yml build

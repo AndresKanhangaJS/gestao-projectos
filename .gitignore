@@ -10,3 +10,7 @@ docker/**/*.log
 
 # Ambiente
 *.env.local
+
+# Producao (docker-compose.prod.yml): segredos, certificados e backups nunca no git
+.env.production
+/backups/

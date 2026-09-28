@@ -13,3 +13,12 @@ frontend/.env
 specs
 .claude
 .github
+# Nunca incluir nas imagens: segredos, certificados, backups, dados/caches locais de dev
+.env.production
+backups
+docker/nginx/certs
+backend/storage/app/private/*
+backend/storage/app/public/*
+backend/public/storage
+backend/bootstrap/cache/*.php
+backend/.phpunit.cache

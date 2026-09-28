@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -103,6 +103,7 @@ vi.mock('@/context/AuthContext', () => ({
   useAuth: () => ({ user: { id: 1, name: 'Ana Admin', email: 'a@x.pt', roles: ['member'] } }),
 }))
 
+import { PROJECT_LIVE_REFETCH_MS } from '@/components/projects/liveRefresh'
 import KanbanBoardPage from './KanbanBoardPage'
 
 function renderPage(path = '/projects/1') {
@@ -210,6 +211,44 @@ describe('KanbanBoardPage: Kanban alinhado com sprints', () => {
       ),
     )
     expect(within(dialog).getByRole('combobox', { name: /coluna/i })).toHaveTextContent('Por fazer')
+  })
+})
+
+describe('KanbanBoardPage: actualização automática', () => {
+  beforeEach(() => {
+    listTasksMock.mockClear()
+    window.localStorage.clear()
+    project = baseProject({ active_sprint: null })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('mostra alterações feitas por outros utilizadores sem recarregar a página', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    renderPage()
+
+    expect(
+      await screen.findByRole('button', { name: /^Tarefa: Tarefa do sprint/ }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /^Tarefa: Criada por outro/ }),
+    ).not.toBeInTheDocument()
+
+    // Outro utilizador cria uma tarefa entretanto.
+    listTasksMock.mockResolvedValueOnce([
+      sprintTask,
+      backlogTask,
+      makeTask(4, 'Criada por outro', null),
+    ])
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(PROJECT_LIVE_REFETCH_MS)
+    })
+
+    expect(
+      await screen.findByRole('button', { name: /^Tarefa: Criada por outro/ }),
+    ).toBeInTheDocument()
   })
 })
 

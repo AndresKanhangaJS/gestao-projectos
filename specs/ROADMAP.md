@@ -29,7 +29,15 @@ Ver `PRD.md` §4. Entregue nesta ronda de trabalho — checklist de aceitação 
 **Fase 1 (implementado):**
 - `backend-ci.yml`: Pint (lint), Larastan (análise estática), PHPUnit (testes), em push/PR.
 - `frontend-ci.yml`: ESLint, `tsc --noEmit`, Vitest, `vite build`, em push/PR.
-- `docker-build.yml`: valida `docker compose build` em push para `main`.
+- `docker-build.yml`: valida `docker compose build` (dev) e, desde a preparação para produção, também `docker compose -f docker-compose.prod.yml build` (com um `.env.production` mínimo gerado a partir do example).
+- Node 24 LTS no CI do frontend e nas imagens Docker.
+
+**Preparação para produção (implementado, deploy manual):**
+- `docker-compose.prod.yml`: nginx (TLS, SPA estática, cabeçalhos de segurança), php-fpm com código na imagem (`composer install --no-dev`, opcache sem validação de timestamps), queue, scheduler, MySQL e Redis sem portas no host, healthchecks, rotação de logs.
+- Arranque de produção: caches de config/rotas/views/eventos, `migrate --force` opcional (`RUN_MIGRATIONS`), falha explícita sem `APP_KEY`.
+- Comando `php artisan app:create-admin` para o primeiro administrador.
+- Serviço `backup`: dump diário da BD e dos anexos, retenção configurável, script de restauro com confirmação.
+- Guia passo a passo em `docs/DEPLOY.md` (deploy, actualização, backups, resolução de problemas, checklist de segurança).
 
 **Fase 2:**
 - Deploy automático para o servidor interno (self-hosted GitHub Actions runner na rede da Level-Soft, ou webhook + script de pull/rebuild) após merge em `main`, com aprovação manual (environment protection rule).

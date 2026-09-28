@@ -51,7 +51,8 @@ O seeder (`php artisan migrate --seed`) cria:
 ```
 backend/     Laravel 13 (API) — PHP 8.4
 frontend/    React 19 + TypeScript + Vite
-docker/      Dockerfiles e configs (nginx, php, frontend)
+docker/      Dockerfiles e configs (nginx, php, frontend, backup)
+docs/        Guia de deploy em produção (DEPLOY.md)
 specs/       PRD, arquitectura, modelo de dados (ERD), roadmap
 .claude/     Convenções do projecto e subagentes especializados
 .github/     Workflows de CI (backend, frontend, build Docker)
@@ -87,9 +88,13 @@ Alterações a `backend/` e `frontend/` reflectem-se automaticamente nos contain
 Ver `.github/workflows/`:
 - `backend-ci.yml` — Pint, Larastan, PHPUnit, em push/PR que toquem `backend/**`.
 - `frontend-ci.yml` — ESLint, Vitest, build, em push/PR que toquem `frontend/**`.
-- `docker-build.yml` — valida `docker compose build` em push/PR.
+- `docker-build.yml` — valida `docker compose build` (dev) e `docker compose -f docker-compose.prod.yml build` (produção) em push/PR.
 
 Deploy automatizado para o servidor da Level-Soft é um item de Fase 2 — ver `specs/ROADMAP.md`.
+
+## Produção
+
+A stack de produção (nginx com TLS e SPA estática, php-fpm com código na imagem, queue, scheduler, MySQL, Redis e backups diários) está em `docker-compose.prod.yml`, configurada por `.env.production` (modelo em `.env.production.example`). O guia passo a passo para a equipa de infraestrutura, incluindo primeiro administrador (`php artisan app:create-admin`), actualizações, backups/restauro e resolução de problemas, está em **[docs/DEPLOY.md](docs/DEPLOY.md)**.
 
 ## Segurança de credenciais
 
@@ -97,4 +102,4 @@ Credenciais de infraestrutura (`Credential.secret`) são guardadas encriptadas (
 
 ## Notas para Windows / Laragon
 
-Este repositório foi desenvolvido num ambiente Windows com Laragon. O PHP/Node instalados globalmente na máquina podem estar desactualizados face aos requisitos deste projecto (PHP 8.4, Node 20) — por isso todo o fluxo de trabalho assume Docker, não instalações locais. Se usar Git Bash e precisar de correr `docker run` pontualmente com bind mounts, defina `MSYS_NO_PATHCONV=1` antes do comando para evitar que o Git Bash reescreva os caminhos estilo Unix.
+Este repositório foi desenvolvido num ambiente Windows com Laragon. O PHP/Node instalados globalmente na máquina podem estar desactualizados face aos requisitos deste projecto (PHP 8.4, Node 24 LTS) — por isso todo o fluxo de trabalho assume Docker, não instalações locais. Se usar Git Bash e precisar de correr `docker run` pontualmente com bind mounts, defina `MSYS_NO_PATHCONV=1` antes do comando para evitar que o Git Bash reescreva os caminhos estilo Unix.
