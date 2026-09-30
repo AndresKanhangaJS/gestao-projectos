@@ -46,6 +46,8 @@ O seeder (`php artisan migrate --seed`) cria:
 - O inventário real de infraestrutura da Level-Soft (10 clientes, 10 produtos de software, 21 máquinas incluindo o servidor de backups, ~24 deployments) descrito em `specs/DATA_MODEL.md` (`DemoInfraSeeder`).
 - Um workspace, projecto, quadro Kanban e 8 tarefas de exemplo no módulo de Gestão de Projectos (`ProjectsDemoSeeder`).
 
+O registo público está fechado por omissão (`AUTH_REGISTRATION_ENABLED=false` em `backend/.env`): use os utilizadores de demonstração acima, ou crie contas em Administração > Utilizadores com o admin. Para testar o ecrã de registo, ponha `AUTH_REGISTRATION_ENABLED=true` em `backend/.env`.
+
 ## Estrutura do repositório
 
 ```
@@ -88,13 +90,15 @@ Alterações a `backend/` e `frontend/` reflectem-se automaticamente nos contain
 Ver `.github/workflows/`:
 - `backend-ci.yml` — Pint, Larastan, PHPUnit, em push/PR que toquem `backend/**`.
 - `frontend-ci.yml` — ESLint, Vitest, build, em push/PR que toquem `frontend/**`.
-- `docker-build.yml` — valida `docker compose build` (dev) e `docker compose -f docker-compose.prod.yml build` (produção) em push/PR.
+- `docker-build.yml`: valida `docker compose build` (dev) e `docker compose --env-file .env.production -f docker-compose.prod.yml build` (produção) em push/PR.
 
 Deploy automatizado para o servidor da Level-Soft é um item de Fase 2 — ver `specs/ROADMAP.md`.
 
 ## Produção
 
 A stack de produção (nginx com TLS e SPA estática, php-fpm com código na imagem, queue, scheduler, MySQL, Redis e backups diários) está em `docker-compose.prod.yml`, configurada por `.env.production` (modelo em `.env.production.example`). O guia passo a passo para a equipa de infraestrutura, incluindo primeiro administrador (`php artisan app:create-admin`), actualizações, backups/restauro e resolução de problemas, está em **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+
+Todos os comandos de produção levam o ficheiro de configuração: `docker compose --env-file .env.production -f docker-compose.prod.yml ...`. Assim o MySQL, o Redis e o serviço de backup recebem só as variáveis de que precisam (nunca a `APP_KEY` nem as credenciais de email). Em produção o registo público também está fechado (`AUTH_REGISTRATION_ENABLED=false`); as contas são criadas pelo administrador.
 
 ## Segurança de credenciais
 

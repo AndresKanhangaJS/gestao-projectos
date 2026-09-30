@@ -37,6 +37,8 @@ use Illuminate\Support\Facades\Route;
 // dentro deste mesmo grupo `auth:sanctum` — não misturar os dois módulos
 // no mesmo bloco.
 
+Route::get('auth/options', [AuthController::class, 'options'])->middleware('throttle:60,1');
+
 Route::middleware('throttle:10,1')->group(function () {
     Route::post('register', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);

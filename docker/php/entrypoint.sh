@@ -7,7 +7,7 @@ set -e
 # ---------------------------------------------------------------------------
 if [ "${APP_ENV:-}" = "production" ]; then
     # Gerar a chave e a unica operacao que tem de funcionar SEM APP_KEY:
-    #   docker compose -f docker-compose.prod.yml run --rm --no-deps app php artisan key:generate --show
+    #   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm --no-deps app php artisan key:generate --show
     case "$*" in
         "php artisan key:generate"*) exec "$@" ;;
     esac
@@ -15,7 +15,7 @@ if [ "${APP_ENV:-}" = "production" ]; then
     if [ -z "${APP_KEY:-}" ]; then
         echo "ERRO: APP_KEY nao esta definida em .env.production." >&2
         echo "Gere uma chave com:" >&2
-        echo "  docker compose -f docker-compose.prod.yml run --rm --no-deps app php artisan key:generate --show" >&2
+        echo "  docker compose --env-file .env.production -f docker-compose.prod.yml run --rm --no-deps app php artisan key:generate --show" >&2
         echo "e copie o valor (base64:...) para APP_KEY em .env.production." >&2
         exit 1
     fi

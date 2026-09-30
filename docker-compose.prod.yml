@@ -1,9 +1,14 @@
 # Stack de PRODUCAO (servidor interno Level-Soft). Independente do docker-compose.yml de desenvolvimento.
 #
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
 #
-# Configuracao da aplicacao: .env.production na raiz do repositorio (copiar de .env.production.example).
-# Variaveis opcionais lidas do shell (ou de um ficheiro .env na raiz): APP_VERSION, HTTP_PORT, HTTPS_PORT, BACKUP_PATH.
+# Configuracao: .env.production na raiz do repositorio (copiar de .env.production.example).
+# O "--env-file .env.production" e obrigatorio em TODOS os comandos: o ficheiro e usado para
+#  - o ambiente completo de app/queue/scheduler (env_file), que precisam de APP_KEY, MAIL_*, etc.;
+#  - a interpolacao ${...} deste ficheiro, que passa ao mysql, redis e backup SO as variaveis
+#    de que precisam (nunca APP_KEY, MAIL_* nem as restantes).
+# Sem ele o Compose para com "... em falta. Use --env-file .env.production".
+# APP_VERSION, HTTP_PORT, HTTPS_PORT e BACKUP_PATH podem estar no .env.production ou vir do shell.
 # Guia completo: docs/DEPLOY.md
 #
 # O nome do projecto e fixo ("gestao-prod") para nunca colidir com o projecto de desenvolvimento
@@ -105,22 +110,18 @@ services:
   mysql:
     image: mysql:8.0
     restart: unless-stopped
-    env_file:
-      - .env.production
-    # As variaveis MYSQL_* sao derivadas das DB_* do .env.production (uma unica fonte de verdade).
-    entrypoint:
-      - sh
-      - -c
-      - |
-        : "$${DB_DATABASE:?DB_DATABASE em falta}" "$${DB_USERNAME:?DB_USERNAME em falta}"
-        : "$${DB_PASSWORD:?DB_PASSWORD em falta}" "$${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD em falta}"
-        export MYSQL_DATABASE="$$DB_DATABASE" MYSQL_USER="$$DB_USERNAME" MYSQL_PASSWORD="$$DB_PASSWORD" MYSQL_ROOT_PASSWORD="$$DB_ROOT_PASSWORD"
-        exec docker-entrypoint.sh mysqld
+    # So as variaveis de que o MySQL precisa, a partir das DB_* do .env.production.
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:?DB_DATABASE em falta. Use --env-file .env.production}
+      MYSQL_USER: ${DB_USERNAME:?DB_USERNAME em falta. Use --env-file .env.production}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD em falta. Use --env-file .env.production}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD em falta. Use --env-file .env.production}
+      TZ: ${TZ:-Africa/Luanda}
     volumes:
       - mysql_data:/var/lib/mysql
     # Sem "ports": a BD so e acessivel dentro da rede interna do Docker.
     healthcheck:
-      test: ["CMD-SHELL", "MYSQL_PWD=\"$$DB_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -uroot --silent"]
+      test: ["CMD-SHELL", "MYSQL_PWD=\"$$MYSQL_ROOT_PASSWORD\" mysqladmin ping -h 127.0.0.1 -uroot --silent"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -132,14 +133,13 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    env_file:
-      - .env.production
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD em falta. Use --env-file .env.production}
+    # A password vem do ambiente do contentor ($$ = sem interpolacao do Compose), nao da linha de comandos.
     command:
       - sh
       - -c
-      - |
-        : "$${REDIS_PASSWORD:?REDIS_PASSWORD em falta}"
-        exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes
+      - exec redis-server --requirepass "$$REDIS_PASSWORD" --appendonly yes
     volumes:
       - redis_data:/data
     # Sem "ports": acessivel apenas na rede interna.
@@ -159,8 +159,16 @@ services:
       dockerfile: docker/backup/Dockerfile
     restart: unless-stopped
     init: true
-    env_file:
-      - .env.production
+    # Credenciais da BD (root, para mysqldump/restauro) e parametros do backup; nada mais.
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_DATABASE: ${DB_DATABASE:?DB_DATABASE em falta. Use --env-file .env.production}
+      DB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD em falta. Use --env-file .env.production}
+      BACKUP_HOUR: ${BACKUP_HOUR:-02}
+      BACKUP_MINUTE: ${BACKUP_MINUTE:-00}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      TZ: ${TZ:-Africa/Luanda}
     volumes:
       - app_storage:/app-storage
       - ${BACKUP_PATH:-./backups}:/backups

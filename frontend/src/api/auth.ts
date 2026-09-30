@@ -1,5 +1,11 @@
 import { api, ensureCsrfCookie } from './client'
-import type { ChangePasswordPayload, LoginPayload, RegisterPayload, User } from '@/types/auth'
+import type {
+  AuthOptions,
+  ChangePasswordPayload,
+  LoginPayload,
+  RegisterPayload,
+  User,
+} from '@/types/auth'
 
 export async function login(payload: LoginPayload): Promise<User> {
   await ensureCsrfCookie()
@@ -25,5 +31,11 @@ export async function changePassword(payload: ChangePasswordPayload): Promise<Us
 
 export async function me(): Promise<User> {
   const { data } = await api.get<User>('/me')
+  return data
+}
+
+/** Opções públicas de autenticação (sem sessão), ex.: se o registo público está aberto. */
+export async function getAuthOptions(): Promise<AuthOptions> {
+  const { data } = await api.get<AuthOptions>('/auth/options')
   return data
 }

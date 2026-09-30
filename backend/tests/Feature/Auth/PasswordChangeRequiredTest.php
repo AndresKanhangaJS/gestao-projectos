@@ -58,6 +58,7 @@ class PasswordChangeRequiredTest extends TestCase
 
     public function test_public_registration_does_not_require_a_change(): void
     {
+        config(['auth.registration_enabled' => true]);
         $this->withHeader('Referer', 'http://localhost');
         config(['sanctum.middleware.validate_csrf_token' => null]);
         $this->userWithRole('member');

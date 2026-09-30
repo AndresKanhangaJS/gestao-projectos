@@ -3,7 +3,7 @@
 # SUBSTITUI os dados actuais. Parar primeiro app/queue/scheduler (ver docs/DEPLOY.md).
 #
 # Uso:
-#   docker compose -f docker-compose.prod.yml run --rm backup /restore.sh db_<bd>_<data>.sql.gz [storage_<data>.tar.gz]
+#   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backup /restore.sh db_<bd>_<data>.sql.gz [storage_<data>.tar.gz]
 set -euo pipefail
 source /usr/local/lib/backup-common.sh
 
@@ -59,4 +59,4 @@ if [ -n "$STORAGE_FILE" ]; then
     log "Storage restaurado."
 fi
 
-log "Restauro concluido. Reiniciar app/queue/scheduler: docker compose -f docker-compose.prod.yml up -d"
+log "Restauro concluido. Reiniciar app/queue/scheduler: docker compose --env-file .env.production -f docker-compose.prod.yml up -d"

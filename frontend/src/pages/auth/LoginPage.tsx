@@ -4,6 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/context/AuthContext'
+import { useAuthOptions } from '@/hooks/useAuthOptions'
 import {
   TOO_MANY_REQUESTS_MESSAGE,
   httpStatus,
@@ -26,6 +27,7 @@ export default function LoginPage() {
   const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const { data: authOptions } = useAuthOptions()
   // Ex.: "A sua conta está desactivada…" quando a API terminou a sessão (401).
   const [serverError, setServerError] = useState<string | null>(readSessionNotice)
   useEffect(() => clearSessionNotice(), [])
@@ -106,12 +108,19 @@ export default function LoginPage() {
               {isSubmitting ? 'A entrar…' : 'Entrar'}
             </Button>
           </form>
-          <p className="mt-4 text-center text-sm text-muted-foreground">
-            Ainda não tem conta?{' '}
-            <Link to="/register" className="font-medium text-primary hover:underline">
-              Registar
-            </Link>
-          </p>
+          {authOptions &&
+            (authOptions.registration_enabled ? (
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                Ainda não tem conta?{' '}
+                <Link to="/register" className="font-medium text-primary hover:underline">
+                  Registar
+                </Link>
+              </p>
+            ) : (
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                Ainda não tem conta? Peça a um administrador para a criar.
+              </p>
+            ))}
         </CardContent>
       </Card>
     </div>

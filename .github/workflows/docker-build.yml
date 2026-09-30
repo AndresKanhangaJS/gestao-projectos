@@ -20,14 +20,15 @@ jobs:
         run: docker compose build
 
       # Só valida o build: o .env.production é gerado a partir do example (sem segredos reais)
-      # porque o Compose exige que o env_file exista.
+      # porque o Compose exige o env_file e usa-o (--env-file) para interpolar as variáveis
+      # de mysql, redis e backup.
       - name: Preparar .env.production mínimo
         run: |
           cp .env.production.example .env.production
           sed -i 's/^APP_KEY=.*/APP_KEY=base64:ci-apenas-para-build/' .env.production
 
       - name: Validar docker-compose.prod.yml
-        run: docker compose -f docker-compose.prod.yml config --quiet
+        run: docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet
 
-      - name: Construir imagens de produção (docker compose -f docker-compose.prod.yml build)
-        run: docker compose -f docker-compose.prod.yml build
+      - name: Construir imagens de produção (docker compose --env-file .env.production -f docker-compose.prod.yml build)
+        run: docker compose --env-file .env.production -f docker-compose.prod.yml build

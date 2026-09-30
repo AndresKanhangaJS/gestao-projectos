@@ -35,6 +35,16 @@ class AuthController extends Controller
 
     private const string NO_SESSION_MESSAGE = 'Sessão indisponível: o pedido não foi reconhecido como vindo da aplicação (domínio não autorizado). Obtenha primeiro /sanctum/csrf-cookie a partir de um domínio autorizado e tente novamente.';
 
+    /**
+     * Opções públicas de autenticação para a SPA (sem autenticação).
+     */
+    public function options(): JsonResponse
+    {
+        return response()->json([
+            'registration_enabled' => (bool) config('auth.registration_enabled'),
+        ]);
+    }
+
     public function register(RegisterRequest $request): JsonResponse
     {
         $this->ensureSession($request);
