@@ -13,12 +13,18 @@ vi.mock('@/context/AuthContext', () => ({
   }),
 }))
 
+const getAuthOptionsMock = vi.fn().mockResolvedValue({ registration_enabled: false })
+
+vi.mock('@/api/auth', () => ({
+  getAuthOptions: () => getAuthOptionsMock(),
+}))
+
 import { AxiosError, AxiosHeaders } from 'axios'
 import { readSessionNotice, saveSessionNotice } from '@/lib/sessionNotice'
 import LoginPage from './LoginPage'
 
 function renderLoginPage() {
-  const queryClient = new QueryClient()
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
@@ -82,5 +88,24 @@ describe('LoginPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('A sua conta está desactivada.')
+  })
+
+  it('não mostra a ligação de registo quando o registo público está desactivado', async () => {
+    getAuthOptionsMock.mockResolvedValueOnce({ registration_enabled: false })
+    renderLoginPage()
+
+    expect(await screen.findByText(/peça a um administrador para a criar/i)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /registar/i })).not.toBeInTheDocument()
+  })
+
+  it('mostra a ligação de registo quando o registo público está activo', async () => {
+    getAuthOptionsMock.mockResolvedValueOnce({ registration_enabled: true })
+    renderLoginPage()
+
+    expect(await screen.findByRole('link', { name: /registar/i })).toHaveAttribute(
+      'href',
+      '/register',
+    )
+    expect(screen.queryByText(/peça a um administrador/i)).not.toBeInTheDocument()
   })
 })

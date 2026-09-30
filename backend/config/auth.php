@@ -114,4 +114,17 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registo público
+    |--------------------------------------------------------------------------
+    |
+    | Com false (por omissão), POST /api/register devolve 403 e as contas são
+    | criadas pelo administrador (Administração > Utilizadores ou
+    | php artisan app:create-admin). Exposto à SPA em GET /api/auth/options.
+    |
+    */
+
+    'registration_enabled' => (bool) env('AUTH_REGISTRATION_ENABLED', false),
+
 ];

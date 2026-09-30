@@ -26,3 +26,9 @@ export interface RegisterPayload {
   password: string
   password_confirmation: string
 }
+
+/** `GET /api/auth/options`: opções públicas de autenticação. */
+export interface AuthOptions {
+  /** Registo público (`POST /api/register`) aberto. Fechado por omissão. */
+  registration_enabled: boolean
+}

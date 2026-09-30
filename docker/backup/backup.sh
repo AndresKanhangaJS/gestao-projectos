@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Backup da base de dados (mysqldump) e dos ficheiros de storage (anexos).
-# Uso: docker compose -f docker-compose.prod.yml run --rm backup /backup.sh
+# Uso: docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backup /backup.sh
 set -euo pipefail
 source /usr/local/lib/backup-common.sh
 

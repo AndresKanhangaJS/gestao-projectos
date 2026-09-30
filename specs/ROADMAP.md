@@ -29,7 +29,7 @@ Ver `PRD.md` §4. Entregue nesta ronda de trabalho — checklist de aceitação 
 **Fase 1 (implementado):**
 - `backend-ci.yml`: Pint (lint), Larastan (análise estática), PHPUnit (testes), em push/PR.
 - `frontend-ci.yml`: ESLint, `tsc --noEmit`, Vitest, `vite build`, em push/PR.
-- `docker-build.yml`: valida `docker compose build` (dev) e, desde a preparação para produção, também `docker compose -f docker-compose.prod.yml build` (com um `.env.production` mínimo gerado a partir do example).
+- `docker-build.yml`: valida `docker compose build` (dev) e, desde a preparação para produção, também `docker compose --env-file .env.production -f docker-compose.prod.yml build` (com um `.env.production` mínimo gerado a partir do example).
 - Node 24 LTS no CI do frontend e nas imagens Docker.
 
 **Preparação para produção (implementado, deploy manual):**
@@ -38,6 +38,8 @@ Ver `PRD.md` §4. Entregue nesta ronda de trabalho — checklist de aceitação 
 - Comando `php artisan app:create-admin` para o primeiro administrador.
 - Serviço `backup`: dump diário da BD e dos anexos, retenção configurável, script de restauro com confirmação.
 - Guia passo a passo em `docs/DEPLOY.md` (deploy, actualização, backups, resolução de problemas, checklist de segurança).
+- Registo público fechado por omissão (`AUTH_REGISTRATION_ENABLED`, exposto à SPA em `GET /api/auth/options`).
+- MySQL, Redis e backup recebem só as variáveis de que precisam (interpolação com `--env-file .env.production`); `APP_KEY` e `MAIL_*` só em app/queue/scheduler.
 
 **Fase 2:**
 - Deploy automático para o servidor interno (self-hosted GitHub Actions runner na rede da Level-Soft, ou webhook + script de pull/rebuild) após merge em `main`, com aprovação manual (environment protection rule).

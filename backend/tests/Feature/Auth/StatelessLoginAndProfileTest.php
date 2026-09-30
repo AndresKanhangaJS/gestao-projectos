@@ -32,6 +32,7 @@ class StatelessLoginAndProfileTest extends TestCase
 
     public function test_register_without_session_fails_with_419_and_creates_no_user(): void
     {
+        config(['auth.registration_enabled' => true]);
         Role::findOrCreate('member', 'web');
 
         $this->postJson('/api/register', [

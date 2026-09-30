@@ -34,6 +34,7 @@ class AuthenticationTest extends TestCase
 
     public function test_a_user_can_register_and_is_assigned_the_member_role(): void
     {
+        config(['auth.registration_enabled' => true]);
         Role::findOrCreate('member', 'web');
 
         $response = $this->postJson('/api/register', [
