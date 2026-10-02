@@ -46,12 +46,11 @@ services:
     restart: unless-stopped
     ports:
       - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443"
     volumes:
-      - ./docker/nginx/certs:/etc/nginx/certs:ro
-      # Atras de um reverse proxy que ja termina TLS: descomentar a linha seguinte,
-      # remover o mapeamento da porta 443 e o volume dos certificados (ver docs/DEPLOY.md).
-      # - ./docker/nginx/prod-behind-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+      # Servidor atras de um reverse proxy que ja termina TLS (ver docs/DEPLOY.md, seccao 8).
+      # Para voltar a terminar TLS neste nginx: remover a linha seguinte, voltar a montar
+      # ./docker/nginx/certs:/etc/nginx/certs:ro e repor o mapeamento da porta 443.
+      - ./docker/nginx/prod-behind-proxy.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       app:
         condition: service_healthy
